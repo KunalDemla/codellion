@@ -8,7 +8,7 @@ For a public question bank:
 3. Verify each answer and alias against an authoritative source.
 4. Store canonical answer, normalized aliases, source URL, and license/provenance metadata.
 5. Review ambiguous answers manually; aliases must be scoped to the relevant question.
-6. Keep exactly one answer in each tier: Public (10), Known Trick (15), User Space (30), Privileged (60), Kernel (85), and Root Key (100). Initially assign rarity editorially. Later calibrate from anonymized aggregate answer frequencies, with safeguards against small-sample noise and abuse.
+6. Keep exactly answers in each tier: Public (10), Known Trick (15), User Space (30), Privileged (60), Kernel (85), and only one answer in Root Key (100). Initially assign rarity editorially. Later calibrate from anonymized aggregate answer frequencies, with safeguards against small-sample noise and abuse.
 7. Review the content and scoring before publishing. Do not assume the starter values are balanced.
 
 The seed command validates seven-question coverage, six unique tiers per question, exact tier scores, and normalized canonical/alias uniqueness. It updates existing canonical answers and synchronizes aliases. Do not reseed or alter answer data during a live UTC daily; materialized daily sets retain prompt order, while the question bank supplies answer keys.
