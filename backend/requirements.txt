@@ -4,3 +4,5 @@ Flask-Migrate>=4,<5
 Flask-Cors>=5,<6
 psycopg[binary]>=3.2,<4
 python-dotenv>=1,<2
+gunicorn>=23,<24
+pytest>=8,<9
