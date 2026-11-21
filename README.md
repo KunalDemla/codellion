@@ -1,6 +1,6 @@
 # ROOT ACCESS
 
-ROOT ACCESS is a daily, hacker-themed knowledge game. The backend is Flask + PostgreSQL; the frontend is React + TypeScript.
+ROOT ACCESS is a daily, hacker-themed knowledge game. The backend is Flask + PostgreSQL; the frontend is React + Vite.
 
 ## Backend
 
@@ -8,7 +8,7 @@ See [`backend/README.md`](backend/README.md) for Windows setup, PostgreSQL confi
 
 ## Frontend
 
-The React/Vite frontend lives in `frontend/`. It should fetch the daily challenge, create a run with a player UUID and run UUID, own the timer, and submit answers using the backend contract documented in `backend/README.md`.
+The React/Vite frontend lives in `frontend/`. Configure its API connection using `frontend/.env.example`. The API contract is documented in `backend/README.md`.
 
 ## Database
 

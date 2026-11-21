@@ -49,7 +49,6 @@ def get_or_create_daily_challenge(challenge_date):
     ordered = sorted(available, key=lambda q: hashlib.sha256(f"{challenge_date.isoformat()}:{q.slug}".encode()).hexdigest())[:count]
     challenge = DailyChallenge(challenge_date=challenge_date)
     db.session.add(challenge)
-    db.session.flush()
     for position, question in enumerate(ordered, 1):
         db.session.add(DailyChallengeQuestion(challenge=challenge, question=question, position=position))
     try:
@@ -106,6 +105,13 @@ def game_payload(game):
             "score": answered[gq.question_id].points_awarded if gq.question_id in answered else None}
             for gq in game.questions]}
 
+def _existing_daily_run(player_id, challenge_date, run_id):
+    existing = Game.query.filter_by(player_id=player_id, challenge_date=challenge_date).first()
+    if existing and existing.run_id != run_id:
+        raise GameError("This player already has a run for this daily challenge.", 409, "daily_run_exists")
+    return existing
+
+
 def create_game(date_value, player_id, run_id):
     challenge_date = _parse_date(date_value)
     today = utc_today()
@@ -113,18 +119,24 @@ def create_game(date_value, player_id, run_id):
         raise GameError(f"Only today's daily challenge can be started ({today.isoformat()}).", 409, "not_current_daily_challenge")
     player_id = _uuid(player_id, "playerId")
     run_id = _uuid(run_id, "runId")
-    existing = Game.query.filter_by(player_id=player_id, challenge_date=challenge_date).first()
+    existing = _existing_daily_run(player_id, challenge_date, run_id)
     if existing:
-        if existing.run_id != run_id:
-            raise GameError("This player already has a run for this daily challenge.", 409, "daily_run_exists")
         return existing
+
     challenge = get_or_create_daily_challenge(challenge_date)
+    questions = list(challenge.questions)
     game = Game(player_id=player_id, run_id=run_id, challenge_date=challenge_date)
     db.session.add(game)
-    db.session.flush()
-    for row in challenge.questions:
-        db.session.add(GameQuestion(game=game, question=row.question, position=row.position))
-    db.session.commit()
+    for row in questions:
+        db.session.add(GameQuestion(game=game, question_id=row.question_id, position=row.position))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        existing = _existing_daily_run(player_id, challenge_date, run_id)
+        if existing is None:
+            raise
+        return existing
     return game
 
 def get_game(run_id):

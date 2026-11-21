@@ -86,6 +86,13 @@ def test_repeating_accepted_submission_replays_original_receipt(client):
     assert second.status_code == 200
     assert second.get_json() == first
 
+def test_starting_with_the_same_id_returns_the_existing_run(client):
+    run = str(uuid.uuid4())
+    first = start(client, run=run)
+    assert start(client, run=run) == first
+    assert Game.query.filter_by(run_id=run).count() == 1
+
+
 def test_one_run_per_player_per_day(client):
     start(client)
     response = client.post("/api/games", json={"date": game_date(), "playerId": PLAYER_A, "runId": str(uuid.uuid4())})
