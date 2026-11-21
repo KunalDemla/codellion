@@ -34,7 +34,7 @@ p, h1, h2 { margin: 0; }
 .header-inner nav { display: flex; align-items: center; gap: 12px; }
 .wordmark { font: 750 17px/1 var(--mono); letter-spacing: -.055em; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .wordmark > span:last-child { color: var(--accent); }
-.brand-icon { display: grid; place-items: center; color: var(--accent); width: 35px; height: 35px; background: #1b2717; border: 1px solid #33482c; border-radius: 7px; margin-right: 8px; }
+.brand-icon { display: block; flex: none; width: 35px; height: 35px; margin-right: 8px; }
 .quiet-button, .icon-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 9px 13px; min-height: 38px; font-weight: 620; font-size: .9rem; }
 .icon-button { width: 40px; height: 40px; padding: 0; }
 .quiet-button:hover, .icon-button:hover { color: #f0f8ee; background: #19231b; }

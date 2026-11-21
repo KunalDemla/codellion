@@ -1,4 +1,3 @@
-import itertools
 import json
 from collections import Counter
 from datetime import timedelta
@@ -14,10 +13,6 @@ def load_bank():
     return json.loads((seed.SEED_DIR / seed.BANK_FILES["curated"]).read_text(encoding="utf-8"))
 
 
-def answer_names(question):
-    return {answer["canonical"] for answer in question["answers"]}
-
-
 def test_curated_bank_covers_familiar_answers_and_keeps_the_tiers():
     bank = load_bank()
     seed.validate_seed(bank, curated=True)
@@ -27,16 +22,22 @@ def test_curated_bank_covers_familiar_answers_and_keeps_the_tiers():
         tiers = Counter(answer["rarity_tier"] for answer in item["answers"])
         assert tiers[6] == 1
         assert all(tiers[level] > 1 for level in range(1, 6))
+        assert item["prompt"].startswith("Name ")
         assert "java.net" not in item["prompt"]
+        assert all(not text.strip().isdigit()
+                   for answer in item["answers"] for text in [answer["canonical"], *answer["aliases"]])
 
     assert by_slug["programming-languages"]["prompt"] == "Name a programming language."
     for slug, familiar in {
         "programming-languages": {"Python", "Java", "JavaScript", "C"},
-        "http-status": {"200", "404", "500", "418"},
+        "http-status-names": {"OK", "Not Found", "Internal Server Error", "I'm a teapot"},
         "git-commands": {"clone", "pull", "commit", "status"},
         "database-engines": {"PostgreSQL", "MySQL", "SQLite", "MongoDB"},
         "sorting-algorithms": {"merge sort", "quicksort", "bubble sort"},
         "html-elements": {"div", "a", "img"},
+        "web-browsers": {"Chrome", "Firefox", "Safari", "Brave"},
+        "dns-records": {"A", "AAAA", "CNAME", "MX"},
+        "ci-tools": {"GitHub Actions", "Jenkins", "CircleCI"},
     }.items():
         public = {a["canonical"] for a in by_slug[slug]["answers"] if a["rarity_tier"] == 1}
         assert familiar.issubset(public)
@@ -45,16 +46,14 @@ def test_curated_bank_covers_familiar_answers_and_keeps_the_tiers():
     assert {"avg", "count", "max", "min", "sum"} <= {
         a["canonical"] for a in aggregates if a["rarity_tier"] <= 2
     }
-    assert answer_names(by_slug["hex-byte"]) == {f"{n:02X}" for n in range(256)}
-    assert answer_names(by_slug["reg-ex-pair"]) == {
-        a + b for a, b in itertools.product("abcdefghijklmnopqrstuvwxyz", "0123456789")
-    }
-    assert answer_names(by_slug["json-one-character"]) == {json.dumps(chr(n)) for n in range(32, 127)}
+    statuses = {answer["canonical"] for answer in by_slug["http-status-names"]["answers"]}
+    assert len(statuses) == 63
+    assert "IM Used" in statuses
 
 
 def test_reseed_keeps_todays_runs_and_refreshes_future_lineups(client, tmp_path, monkeypatch):
     previous = Question.query.filter_by(status="approved").order_by(Question.id).first()
-    previous.slug = "curated-old-question"
+    previous.slug = "curated-basics-binary-shift"
     db.session.commit()
     before = client.get("/api/today").get_json()
     tomorrow = game_service.utc_today() + timedelta(days=1)
@@ -62,8 +61,8 @@ def test_reseed_keeps_todays_runs_and_refreshes_future_lineups(client, tmp_path,
     original_preview = client.get(tomorrow_path).get_json()["questions"]
 
     selected = {
-        "json-one-character", "css-colors", "sql-aggregates", "python-modules",
-        "programming-languages", "database-engines", "http-status",
+        "python-keywords", "css-colors", "sql-aggregates", "dns-records",
+        "programming-languages", "database-engines", "http-status-names",
     }
     sample = [item for item in load_bank() if item["slug"].removeprefix("curated-basics-") in selected]
     for name in seed.BANK_FILES.values():
@@ -86,11 +85,14 @@ def test_reseed_keeps_todays_runs_and_refreshes_future_lineups(client, tmp_path,
     monkeypatch.setattr(game_service, "utc_today", lambda: tomorrow)
     next_daily = client.get("/api/today").get_json()
     assert len(next_daily["questions"]) == 7
-    prompt = next(item for item in next_daily["questions"] if "printable ASCII" in item["prompt"])
-    for raw in ('"a"', '"A"'):
-        player_id, run_id = str(uuid4()), str(uuid4())
-        identifiers = {"playerId": player_id, "runId": run_id, "date": next_daily["date"]}
-        assert client.post("/api/games", json=identifiers).status_code == 201
-        reply = client.post("/api/submit", json={**identifiers, "promptId": prompt["promptId"], "answer": raw})
-        assert reply.get_json()["accepted"]
-        assert reply.get_json()["answer"] == raw
+    statuses = next(item for item in next_daily["questions"] if "HTTP response status" in item["prompt"])
+    keywords = next(item for item in next_daily["questions"] if "Python keyword" in item["prompt"])
+    player_id, run_id = str(uuid4()), str(uuid4())
+    identifiers = {"playerId": player_id, "runId": run_id, "date": next_daily["date"]}
+    assert client.post("/api/games", json=identifiers).status_code == 201
+    for prompt, wrong, correct in [(statuses, "404", "Not Found"), (keywords, "true", "True")]:
+        guess = {**identifiers, "promptId": prompt["promptId"], "answer": wrong}
+        assert not client.post("/api/submit", json=guess).get_json()["accepted"]
+        result = client.post("/api/submit", json={**guess, "answer": correct}).get_json()
+        assert result["accepted"]
+        assert result["answer"] == correct

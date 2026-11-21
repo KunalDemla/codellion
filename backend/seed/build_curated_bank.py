@@ -1,4 +1,4 @@
-"""Build the playable bank from pinned catalogs and finite practice questions."""
+"""Build the playable bank from pinned reference catalogs."""
 
 import argparse
 import builtins
@@ -20,7 +20,7 @@ import yaml
 SEED = Path(__file__).resolve().parent
 sys.path.insert(0, str(SEED.parent))
 from app.services.answer_validator import normalize_answer
-from practice_prompts import practice
+from named_prompts import extra_catalogs
 
 POINTS = (10, 15, 30, 60, 85, 100)
 BCD = "CC0-1.0 (MDN browser compatibility data)"
@@ -320,11 +320,11 @@ def everyday_tools(bank):
     for item in tldr["tree"]:
         path = item["path"]
         match = re.fullmatch(r"pages/(?:common|linux)/([a-zA-Z0-9_.+-]+)\.md", path)
-        if match:
+        if match and not match[1].isdigit():
             name = match[1]
             names.setdefault(name, Answer(name, "https://github.com/tldr-pages/tldr/blob/" + tldr["sha"] + "/" + path))
     bank.add("shell-commands", "Command line", "Name a command you can run in a Linux terminal.",
-             "Use a standalone command name from the Linux or common pages in tldr. Leave out flags and arguments.",
+             "Use a command name from the Linux or common tldr pages. Leave out flags, arguments, and all-number names.",
              names.values(), "MIT (tldr-pages); command names",
              common="ls|cd|mkdir|pwd|cat|echo|rm|cp|mv|grep|find|touch|chmod|curl|git", root="xargs")
     windows = [
@@ -358,7 +358,7 @@ def everyday_tools(bank):
         "wasip1": ["WASI"], "js": ["JavaScript"],
     }
     architectures = {
-        "amd64": ["x86-64", "x86_64", "x64"], "386": ["x86", "i386", "32-bit x86"],
+        "amd64": ["x86-64", "x86_64", "x64"], "386": ["i386", "32-bit x86", "Intel 386"],
         "arm64": ["AArch64"], "wasm": ["WebAssembly"], "ppc64": ["PowerPC64", "PowerPC 64"],
         "s390x": ["IBM Z"], "riscv64": ["RISC-V 64", "RISC-V"],
     }
@@ -367,11 +367,12 @@ def everyday_tools(bank):
          "Use a Go target operating system or runtime, such as Windows. Platform names and GOOS values work.",
          operating_systems, "linux|windows|darwin|android|ios|freebsd", "plan9"),
         ("cpu-architectures", 1, "Name a CPU or virtual machine architecture.",
-         "Use an architecture from Go’s target list. Common architecture names and GOARCH values work.",
-         architectures, "amd64|386|arm|arm64|wasm|riscv64", "s390x"),
+         "Use an architecture from Go’s target list. Use the architecture name. Alphabetic GOARCH names also work.",
+         architectures, "amd64|x86|arm|arm64|wasm|riscv64", "s390x"),
     ]:
         bank.add(slug, "Computer systems", prompt, scope,
-                 (Answer(name, "https://github.com/golang/go/blob/go1.24.0/src/internal/platform/zosarch.go", aliases.get(name, []))
+                 (Answer("x86" if name == "386" else name,
+                         "https://github.com/golang/go/blob/go1.24.0/src/internal/platform/zosarch.go", aliases.get(name, []))
                   for name in sorted({pair[column] for pair in pairs})),
                  "BSD-3-Clause (Go); target identifiers", common=common, root=root)
 
@@ -379,16 +380,25 @@ def everyday_tools(bank):
 def internet(bank):
     iana = "https://www.iana.org/assignments/"
     status = []
+    reason_aliases = {
+        "OK": ["Success"],
+        "Found": ["Moved Temporarily"],
+        "Not Found": ["Page Not Found"],
+        "Content Too Large": ["Payload Too Large", "Request Entity Too Large"],
+        "Unprocessable Content": ["Unprocessable Entity"],
+    }
     for row in bank.csv("http-status"):
-        value, title = row["Value"], row["Description"]
-        if value.isdigit() and title not in {"Unassigned", "(Unused)"}:
-            alias = [title] if not title.startswith("(") and title not in {"Unassigned", "Reserved"} else []
-            status.append(Answer(value, iana + "http-status-codes", alias + ["HTTP " + value]))
-    status.append(Answer("418", "https://www.rfc-editor.org/rfc/rfc2324.html#section-2.3.2",
-                         ["I'm a teapot", "I’m a teapot", "teapot", "HTTP 418"]))
-    bank.add("http-status", "HTTP", "Name an HTTP status code.",
-             "Use a number or name from IANA’s assigned list. The historical teapot code also counts.",
-             status, IANA, common="200|404|500|301|403|401|201|204|400|302|503|418", root="226")
+        code, reason = row["Value"], row["Description"]
+        if code.isdigit() and reason not in {"Unassigned", "Reserved"} and not reason.startswith("("):
+            reason = re.sub(r" \(TEMPORARY.*$", "", reason)
+            status.append(Answer(reason, iana + "http-status-codes", reason_aliases.get(reason, [])))
+    status.append(Answer("I'm a teapot", "https://www.rfc-editor.org/rfc/rfc2324.html#section-2.3.2",
+                         ["I’m a teapot", "teapot"]))
+    bank.add("http-status-names", "HTTP", "Name an HTTP response status.",
+             "Give its reason phrase, such as Not Found. Named IANA statuses and the historical teapot status count.",
+             status, IANA,
+             common="OK|Not Found|Internal Server Error|Moved Permanently|Forbidden|Unauthorized|Created|No Content|Bad Request|Found|Service Unavailable|I'm a teapot",
+             root="IM Used")
     bank.plain("http-methods", "HTTP", "Name an HTTP request method.",
                "Use a method in IANA’s registry. The method name is enough.",
                (row["Method Name"] for row in bank.csv("http-methods")),
@@ -405,11 +415,6 @@ def internet(bank):
               for row in bank.csv("uri-schemes") if row["Status"] in {"Permanent", "Provisional"} and row["URI Scheme"]),
              IANA, common="http|https|file|ftp|mailto|data|ws|wss|tel", root="magnet")
     ports = [row for row in bank.csv("ports") if row["Service Name"] and row["Port Number"].isdigit()]
-    bank.plain("registered-ports", "Networking", "Give a port number used by a network service.",
-               "Use a number with its own TCP or UDP entry in IANA’s service port registry.",
-               sorted({int(row["Port Number"]) for row in ports if row["Transport Protocol"] in {"tcp", "udp"}}),
-               iana + "service-names-port-numbers", IANA, common="80|443|22|21|53|25|110|143|3306|5432|8080",
-               root="9418")
     aliases = {"domain": ["DNS"], "bootps": ["DHCP"], "https": ["HTTP over TLS"],
                "http": ["HTTP/1.1"], "secure-mqtt": ["MQTT over TLS"]}
     bank.add("network-services", "Networking", "Name a network service or protocol that uses an assigned port.",
@@ -433,15 +438,6 @@ def internet(bank):
     bank.add("country-domains", "Networking", "Name a country-code top-level domain.",
              "Use a country or territory suffix listed by IANA. The leading dot is optional.",
              domains, IANA, common=".in|.uk|.us|.ca|.de|.au|.jp|.fr|.cn|.io", root=".tv")
-    scripts = []
-    for line in bank.text("scripts").splitlines():
-        fields = [x.strip() for x in line.partition("#")[0].split(";")]
-        if fields[0] == "sc" and fields[2] not in {"Common", "Inherited", "Unknown"}:
-            scripts.append(Answer(fields[2].replace("_", " "), "https://www.unicode.org/reports/tr24/",
-                                  fields[1:2] + fields[2:]))
-    bank.add("writing-systems", "Text and encoding", "Name a writing system supported by Unicode.",
-             "Use a Unicode script name or its registered abbreviation. Script names such as Latin or Greek count.",
-             scripts, "Unicode-3.0", common="Latin|Greek|Cyrillic|Arabic|Hebrew|Han|Devanagari|Hangul|Thai", root="Ogham")
 
 
 def files(bank):
@@ -536,7 +532,7 @@ def main():
     bank = Bank(args.sources)
     for group in (web, languages, everyday_tools, internet, files, algorithms):
         group(bank)
-    practice(bank, Answer)
+    extra_catalogs(bank, Answer)
     if args.inspect:
         for question in bank.questions:
             print(f"{len(question['answers']):5}  {question['prompt']}")

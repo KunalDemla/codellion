@@ -180,7 +180,17 @@ export function createQuizApi({
         dailyId: data.date, dayNumber: data.dayNumber, resetsAt: data.resetAt, opensAt: data.date + 'T00:00:00Z',
         rules: { ...RULES, ...data.rules }, prompts: data.questions.map(promptShape),
       };
-      const previous = read().runs[daily.dailyId];
+      const state = read();
+      let previous = state.runs[daily.dailyId];
+      if (previous && (previous.prompts?.length !== daily.prompts.length
+        || previous.prompts.some((prompt, index) => {
+          const current = daily.prompts[index];
+          return prompt.id !== current.id || prompt.text !== current.text || prompt.scope !== current.scope;
+        }))) {
+        delete state.runs[daily.dailyId];
+        write(state);
+        previous = null;
+      }
       const run = previous?.started ? await reconcile(previous) : null;
       return { ...daily, ...snapshot(run) };
     },

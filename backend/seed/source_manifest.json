@@ -91,10 +91,6 @@
     "url": "https://raw.githubusercontent.com/golang/go/go1.24.0/src/internal/platform/zosarch.go",
     "sha256": "ada0d7df7304b4df6f03e90982428823feab16619c17dded138b28e8acf1bac1"
   },
-  "scripts": {
-    "url": "https://www.unicode.org/Public/17.0.0/ucd/PropertyValueAliases.txt",
-    "sha256": "64e9a5f76f7a1e8b5a47d6a1f9a26522a251208f5276bdfa1559dac7cf2e827a"
-  },
   "sqlite-aggregates": {
     "url": "https://www.sqlite.org/lang_aggfunc.html",
     "sha256": "e7697bd9db597d9d7de0b65f9d5c2e631f1d091ed6e809a3ec05cc229bdb0577"
@@ -110,5 +106,93 @@
   "nist-areas": {
     "url": "https://xlinux.nist.gov/dads/termsArea.html",
     "sha256": "9b3b5ef1e13ae884c4bfb694dd88837f4774ef20f96adb93342508341458130d"
+  },
+  "cncf": {
+    "url": "https://raw.githubusercontent.com/cncf/landscape/master/landscape.yml",
+    "sha256": "86ce6c83af492942287a3d72bc894332773729aae9f69f75d870fe72b3326e92"
+  },
+  "xdg-desktops": {
+    "url": "https://specifications.freedesktop.org/menu/latest/onlyshowin-registry.html",
+    "sha256": "27ae4ff5322499ff1c90beb2cc73072c02ce04966fc850647aa716ad3079d384"
+  },
+  "dns-types": {
+    "url": "https://www.iana.org/assignments/dns-parameters/dns-parameters-4.csv",
+    "sha256": "52a1b8d3a42dae6a223772b687dc775a4c289fb9fb3004dfb54da13dfd36a568"
+  },
+  "http-cache": {
+    "url": "https://www.iana.org/assignments/http-cache-directives/cache-directives.csv",
+    "sha256": "faef0d2f3315a0b6f4a3c4a209f60819cdf3c723d54dbbbb21f5ab6268c3bdf6"
+  },
+  "http-auth": {
+    "url": "https://www.iana.org/assignments/http-authschemes/authschemes.csv",
+    "sha256": "e1107c28c77c18649f12cfd38073e4d77e39dbf23662b3b592acf6e9332eead8"
+  },
+  "purl": {
+    "url": "https://raw.githubusercontent.com/package-url/purl-spec/main/purl-types-index.json",
+    "sha256": "b9fe4ac32bfac3f978f3c969d4538172c5f5c55cf273ea3457a026899ccd7fe6"
+  },
+  "git-hooks-source": {
+    "url": "https://raw.githubusercontent.com/git/git/v2.50.1/Documentation/githooks.adoc",
+    "sha256": "dc7165822ba02f5c73ecd386218e236c56cef166eb73e905eec82b712d541f19"
+  },
+  "linux-syscalls": {
+    "url": "https://raw.githubusercontent.com/torvalds/linux/v6.12/arch/x86/entry/syscalls/syscall_64.tbl",
+    "sha256": "980ce3115028c71c5618e7864d262017bde8103bcfe7b413147a14fd312c92ac"
+  },
+  "posix-signals": {
+    "url": "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/signal.h.html",
+    "sha256": "cec3894cb31e3d52f183a31f0eda5b915161f3f9b8a7511267fc69f069a9ff75"
+  },
+  "go-spec": {
+    "url": "https://go.dev/ref/spec",
+    "sha256": "57831a144955cd605f8a9989938e692cbc683a272fd1f741371b60a76e3169eb"
+  },
+  "rust-keywords": {
+    "url": "https://doc.rust-lang.org/reference/keywords.html",
+    "sha256": "9052e9cefb2350cc4f10e8fdb61f9d93a189c4b1014283adca2bf0a42e2c6cc9"
+  },
+  "ecma-lexical": {
+    "url": "https://tc39.es/ecma262/multipage/ecmascript-language-lexical-grammar.html",
+    "sha256": "86b51ff628fe6055798234e3476aa8b83c2a16b7a2bb8d548977542108689132"
+  },
+  "osinfo": {
+    "url": "https://deb.debian.org/debian/pool/main/o/osinfo-db/osinfo-db_0.20250606.orig.tar.xz",
+    "sha256": "353859fe1e8eb060908c772926b56f768c86a7885af6474d2b8fdefbe767236d"
+  },
+  "bash-manual": {
+    "url": "https://www.gnu.org/software/bash/manual/bash.html",
+    "sha256": "78d0eefbe60cfe7345ffdafede7294f055b04e53bd520360ff699b24f81e2b4b"
+  },
+  "sql-window": {
+    "url": "https://www.sqlite.org/windowfunctions.html",
+    "sha256": "6ceca4a564bbf8e312a465d7888230dca5fe591c28cc58298e511989bc341720"
+  },
+  "ts-dom": {
+    "url": "https://raw.githubusercontent.com/microsoft/TypeScript/v5.9.3/lib/lib.dom.d.ts",
+    "sha256": "080941d9f9ff9307f7e27a83bcd888b7c8270716c39af943532438932ec1d0b9"
+  },
+  "php-keywords": {
+    "url": "https://www.php.net/manual/en/reserved.keywords.php",
+    "sha256": "db014f8e80a5f26456cc98251bdd6ba1f5003fae824112b0c1c72d420115a3c7"
+  },
+  "python-file-modules": {
+    "url": "https://docs.python.org/3.12/library/filesys.html",
+    "sha256": "a86ead1cbd68c07412c2b42f1c41348dc0637177aa4e12f4e832d976f04a3b07"
+  },
+  "python-archive-modules": {
+    "url": "https://docs.python.org/3.12/library/archiving.html",
+    "sha256": "0deab4f99710be8446fc32af0792d624a503a2b6349fcdfeae769aa547f92510"
+  },
+  "aria-roles": {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles",
+    "sha256": "35da0e4e8a417e7f91a4143f57709ef93e40d87a1286b85e6559b0b54a4154fa"
+  },
+  "css-functions": {
+    "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/Functions",
+    "sha256": "54d01989b64c8fc86bc4295f5ac55bf7ee9452d52a9f69ed00c0f2c6dab56203"
+  },
+  "selfhosted": {
+    "url": "https://raw.githubusercontent.com/awesome-selfhosted/awesome-selfhosted/master/README.md",
+    "sha256": "d605e5107677daa0fc84ce96c3d2f49a40b966f39bfdbe4361082e8ecebee37c"
   }
 }

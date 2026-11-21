@@ -23,7 +23,7 @@ function Header({ open }) {
   return (
     <header className="site-header">
       <div className="header-inner">
-        <div className="wordmark"><span className="brand-icon"><Terminal size={20} /></span> ROOT<span>ACCESS</span></div>
+        <div className="wordmark"><img className="brand-icon" src={import.meta.env.BASE_URL + 'root-access-icon.png'} alt="" width="35" height="35" /> ROOT<span>ACCESS</span></div>
         <nav aria-label="Quiz tools">
           <button className="quiet-button help-button" onClick={() => open('rules')}><CircleHelp size={17} /> <span>How to play</span></button>
           <button className="icon-button" aria-label="Settings" onClick={() => open('settings')}><Settings2 size={19} /></button>

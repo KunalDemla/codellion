@@ -57,3 +57,31 @@ test('the player reset clears old progress and keeps runs started after the rese
   assert.notEqual(playerId, oldId);
   assert.equal((await createQuizApi(config).daily()).run.id, run.id);
 });
+
+test('repicking a daily clears only the browser run for that lineup', async () => {
+  const key = 'root-access:codellion:v2:/api';
+  const today = '2026-11-21';
+  const yesterday = '2026-11-20';
+  const playerId = newQuizId();
+  const previous = { id: newQuizId(), phase: 'completed' };
+  const entries = new Map([[key, JSON.stringify({
+    playerId,
+    runs: {
+      [yesterday]: previous,
+      [today]: { started: true, prompts: [{ id: 'p1', text: 'Give a status code.' }] },
+    },
+  })]]);
+  const storage = {
+    getItem: key => entries.get(key),
+    setItem: (key, value) => entries.set(key, value),
+    removeItem: key => entries.delete(key),
+  };
+  const api = createQuizApi({ baseUrl: '/api', timeoutMs: 5000, storage,
+    fetcher: async () => Response.json({
+      date: today, serverTime: today + 'T10:00:00Z', resetAt: '2026-11-22T00:00:00Z',
+      questions: [{ promptId: 'p1', prompt: 'Name an HTTP response status.' }],
+    }),
+  });
+  assert.equal((await api.daily()).run, null);
+  assert.deepEqual(JSON.parse(entries.get(key)), { playerId, runs: { [yesterday]: previous } });
+});
