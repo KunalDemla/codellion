@@ -1,0 +1,220 @@
+[
+  {
+    "slug": "name-a-cryptographic-hash-function",
+    "category": {
+      "slug": "cryptography",
+      "name": "Cryptography"
+    },
+    "prompt": "Name a cryptographic hash function.",
+    "difficulty": 2,
+    "answers": [
+      {
+        "canonical": "SHA-256",
+        "aliases": [
+          "SHA256"
+        ],
+        "rarity_tier": 1,
+        "points": 10,
+        "explanation": "A widely deployed member of the SHA-2 family."
+      },
+      {
+        "canonical": "BLAKE2",
+        "aliases": [
+          "BLAKE2b",
+          "BLAKE2s"
+        ],
+        "rarity_tier": 2,
+        "points": 25,
+        "explanation": "A family of cryptographic hash functions."
+      },
+      {
+        "canonical": "Whirlpool",
+        "aliases": [],
+        "rarity_tier": 3,
+        "points": 50,
+        "explanation": "A 512-bit hash function standardized in ISO/IEC 10118-3."
+      },
+      {
+        "canonical": "Snefru",
+        "aliases": [],
+        "rarity_tier": 4,
+        "points": 75,
+        "explanation": "An early hash function designed by Ralph Merkle."
+      }
+    ]
+  },
+  {
+    "slug": "name-a-programming-language",
+    "category": {
+      "slug": "programming",
+      "name": "Programming"
+    },
+    "prompt": "Name a programming language.",
+    "difficulty": 1,
+    "answers": [
+      {
+        "canonical": "Python",
+        "aliases": [],
+        "rarity_tier": 1,
+        "points": 10,
+        "explanation": "A widely used general-purpose language."
+      },
+      {
+        "canonical": "Rust",
+        "aliases": [],
+        "rarity_tier": 2,
+        "points": 25,
+        "explanation": "A systems programming language focused on memory safety."
+      },
+      {
+        "canonical": "Erlang",
+        "aliases": [],
+        "rarity_tier": 3,
+        "points": 50,
+        "explanation": "A language designed for concurrent and fault-tolerant systems."
+      },
+      {
+        "canonical": "J",
+        "aliases": [],
+        "rarity_tier": 4,
+        "points": 75,
+        "explanation": "An array programming language."
+      }
+    ]
+  },
+  {
+    "slug": "name-a-sorting-algorithm",
+    "category": {
+      "slug": "algorithms",
+      "name": "Algorithms"
+    },
+    "prompt": "Name a sorting algorithm.",
+    "difficulty": 1,
+    "answers": [
+      {
+        "canonical": "Quicksort",
+        "aliases": [
+          "Quick sort"
+        ],
+        "rarity_tier": 1,
+        "points": 10,
+        "explanation": "A comparison sort using partitioning."
+      },
+      {
+        "canonical": "Heapsort",
+        "aliases": [
+          "Heap sort"
+        ],
+        "rarity_tier": 2,
+        "points": 25,
+        "explanation": "A comparison sort based on a heap."
+      },
+      {
+        "canonical": "TimSort",
+        "aliases": [
+          "Tim sort"
+        ],
+        "rarity_tier": 3,
+        "points": 50,
+        "explanation": "A hybrid stable sorting algorithm used in standard libraries."
+      },
+      {
+        "canonical": "Smoothsort",
+        "aliases": [],
+        "rarity_tier": 4,
+        "points": 75,
+        "explanation": "An adaptive heapsort variant designed by Edsger Dijkstra."
+      }
+    ]
+  },
+  {
+    "slug": "name-an-application-layer-protocol",
+    "category": {
+      "slug": "networking",
+      "name": "Networking"
+    },
+    "prompt": "Name an application-layer network protocol.",
+    "difficulty": 2,
+    "answers": [
+      {
+        "canonical": "HTTP",
+        "aliases": [
+          "Hypertext Transfer Protocol"
+        ],
+        "rarity_tier": 1,
+        "points": 10,
+        "explanation": "A foundational web protocol."
+      },
+      {
+        "canonical": "DNS",
+        "aliases": [
+          "Domain Name System"
+        ],
+        "rarity_tier": 2,
+        "points": 25,
+        "explanation": "A distributed naming system."
+      },
+      {
+        "canonical": "MQTT",
+        "aliases": [
+          "Message Queuing Telemetry Transport"
+        ],
+        "rarity_tier": 3,
+        "points": 50,
+        "explanation": "A lightweight publish-subscribe messaging protocol."
+      },
+      {
+        "canonical": "Gopher",
+        "aliases": [],
+        "rarity_tier": 4,
+        "points": 75,
+        "explanation": "An older application-layer protocol for document retrieval."
+      }
+    ]
+  },
+  {
+    "slug": "name-a-linux-filesystem",
+    "category": {
+      "slug": "operating-systems",
+      "name": "Operating Systems"
+    },
+    "prompt": "Name a filesystem supported by Linux.",
+    "difficulty": 2,
+    "answers": [
+      {
+        "canonical": "ext4",
+        "aliases": [
+          "Fourth Extended Filesystem"
+        ],
+        "rarity_tier": 1,
+        "points": 10,
+        "explanation": "A commonly used Linux filesystem."
+      },
+      {
+        "canonical": "Btrfs",
+        "aliases": [
+          "B-tree filesystem"
+        ],
+        "rarity_tier": 2,
+        "points": 25,
+        "explanation": "A copy-on-write filesystem for Linux."
+      },
+      {
+        "canonical": "F2FS",
+        "aliases": [
+          "Flash-Friendly File System"
+        ],
+        "rarity_tier": 3,
+        "points": 50,
+        "explanation": "A filesystem designed for NAND flash storage."
+      },
+      {
+        "canonical": "bcachefs",
+        "aliases": [],
+        "rarity_tier": 4,
+        "points": 75,
+        "explanation": "A copy-on-write filesystem for Linux."
+      }
+    ]
+  }
+]
