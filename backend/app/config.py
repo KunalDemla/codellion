@@ -12,6 +12,7 @@ class Config:
         "postgresql+psycopg://root_access:local_only_change_me@localhost:5432/root_access",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
     JSON_SORT_KEYS = False
     GAME_QUESTION_COUNT = 7
     RECEIPT_MAX_AGE_MS = int(os.getenv("RECEIPT_MAX_AGE_MS", str(30 * 24 * 60 * 60 * 1000)))

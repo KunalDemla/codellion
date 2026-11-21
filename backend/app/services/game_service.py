@@ -3,7 +3,7 @@ import re
 import uuid
 from difflib import SequenceMatcher
 from datetime import date, datetime, time, timedelta, timezone
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from flask import current_app
 from app.extensions import db
@@ -36,17 +36,30 @@ def get_or_create_daily_challenge(challenge_date):
     if challenge:
         return challenge
     count = current_count()
-    candidates = (Question.query.filter_by(status="approved")
-        .join(Question.answers).group_by(Question.id)
-        .having(func.count(AcceptedAnswer.id) == 6).all())
     expected_points = current_app.config["RARITY_TIER_POINTS"]
-    available = [question for question in candidates
-        if {answer.rarity_tier for answer in question.answers} == set(expected_points)
-        and all(answer.points == expected_points.get(answer.rarity_tier) for answer in question.answers)]
+    expected = {
+        tier: and_(AcceptedAnswer.rarity_tier == tier, AcceptedAnswer.points == points)
+        for tier, points in expected_points.items()
+    }
+    criteria = [func.count().filter(~or_(*expected.values())) == 0]
+    for tier, valid in expected.items():
+        entries = func.count().filter(valid)
+        criteria.append(entries == 1 if tier == 6 else entries >= 1)
+    available = (Question.query.filter_by(status="approved").join(Question.answers)
+        .filter(AcceptedAnswer.is_active.is_(True))
+        .group_by(Question.id).having(*criteria).all())
     if len(available) < count:
         raise GameError(f"Not enough approved questions with accepted answers. Need {count}, found {len(available)}.", 503, "question_bank_too_small")
     # Stable ordering means every player receives the same prompts in the same order.
-    ordered = sorted(available, key=lambda q: hashlib.sha256(f"{challenge_date.isoformat()}:{q.slug}".encode()).hexdigest())[:count]
+    ranked = sorted(available, key=lambda q: hashlib.sha256(f"{challenge_date.isoformat()}:{q.slug}".encode()).hexdigest())
+    ordered, extras, categories = [], [], set()
+    for question in ranked:
+        if question.category_id in categories:
+            extras.append(question)
+        else:
+            ordered.append(question)
+            categories.add(question.category_id)
+    ordered = (ordered + extras)[:count]
     challenge = DailyChallenge(challenge_date=challenge_date)
     db.session.add(challenge)
     for position, question in enumerate(ordered, 1):
@@ -86,7 +99,7 @@ def today_payload():
     }
 
 def public_question(question, position):
-    return {"promptId": f"p{position}", "prompt": question.prompt,
+    return {"promptId": f"p{position}", "prompt": question.prompt, "scope": question.scope,
             "difficulty": question.difficulty,
             "category": {"name": question.category.name, "slug": question.category.slug}}
 
@@ -154,21 +167,21 @@ def current_app_config():
     from flask import current_app
     return current_app.config
 
-def _correction_suggestion(question_id, normalized):
+def _correction_suggestion(question_id, normalized, allow_fuzzy, case_sensitive):
     exact_alias = (AcceptedAnswer.query.join(AnswerAlias).filter(
         AcceptedAnswer.question_id == question_id,
-        AnswerAlias.normalized == normalized).first())
+        AcceptedAnswer.is_active.is_(True), AnswerAlias.normalized == normalized).first())
     if exact_alias is not None:
         return exact_alias
     # Conservative typo suggestions only. Ambiguous or weak matches stay retryable.
-    if len(normalized) < 4:
+    if not allow_fuzzy or len(normalized) < 4:
         return None
-    answers = AcceptedAnswer.query.filter_by(question_id=question_id).all()
+    answers = AcceptedAnswer.query.filter_by(question_id=question_id, is_active=True).all()
     candidates = [(answer, answer.canonical) for answer in answers]
-    aliases = AnswerAlias.query.join(AcceptedAnswer).filter(AcceptedAnswer.question_id == question_id).all()
+    aliases = AnswerAlias.query.join(AcceptedAnswer).filter(AcceptedAnswer.question_id == question_id, AcceptedAnswer.is_active.is_(True)).all()
     candidates.extend((alias.answer, alias.alias) for alias in aliases)
     ranked = sorted(
-        ((SequenceMatcher(None, normalized, normalize_answer(label)).ratio(), answer)
+        ((SequenceMatcher(None, normalized, normalize_answer(label, case_sensitive)).ratio(), answer)
          for answer, label in candidates),
         key=lambda item: item[0], reverse=True)
     unique_ranked = []
@@ -221,14 +234,14 @@ def submit_answer(data):
             "quip": current_app.config["QUIPS"].get(str(existing.accepted_answer.rarity_tier), "Nice catch."),
             "receipt": existing.receipt_token,
         }
-    normalized = normalize_answer(raw)
+    normalized = normalize_answer(raw, game_question.question.case_sensitive)
     if not normalized:
         return {"accepted": False}
-    answer = AcceptedAnswer.query.filter_by(question_id=game_question.question_id, normalized=normalized).first()
-    alias = _correction_suggestion(game_question.question_id, normalized) if answer is None else None
+    answer = AcceptedAnswer.query.filter_by(question_id=game_question.question_id, normalized=normalized, is_active=True).first()
+    alias = _correction_suggestion(game_question.question_id, normalized, game_question.question.allow_fuzzy, game_question.question.case_sensitive) if answer is None else None
     exact_alias = (AnswerAlias.query.join(AcceptedAnswer).filter(
         AcceptedAnswer.question_id == game_question.question_id,
-        AnswerAlias.normalized == normalized).first()) if answer is None else None
+        AcceptedAnswer.is_active.is_(True), AnswerAlias.normalized == normalized).first()) if answer is None else None
     match = answer or (exact_alias.answer if exact_alias is not None and preview else None)
     if match is None:
         if alias is not None and not preview:

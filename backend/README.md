@@ -13,9 +13,11 @@ Flask + SQLAlchemy + PostgreSQL backend. The daily challenge changes at **00:00 
 - Public daily/run responses do not expose canonical answers, aliases, or rarity data.
 - Question sets are materialized and persisted when the date is first requested. Do not run the seed command or edit answer data during a live daily; content is not snapshotted separately from the question bank.
 
-## Windows setup
+## Local setup
 
-Python 3.12 and PostgreSQL 15+ are recommended. Docker Desktop is optional; native PostgreSQL works.
+Python 3.12 and PostgreSQL 15+ are recommended. Use a native PostgreSQL installation or the optional Docker Compose setup in `../database`.
+
+### Windows
 
 ```powershell
 cd backend
@@ -26,20 +28,37 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Set a strong random `SECRET_KEY` and a working PostgreSQL `DATABASE_URL` in `.env`. `APP_ENV=production` rejects the development fallback secret and secrets shorter than 32 characters. Set `DAILY_EPOCH_DATE` to the first date of the day-number sequence if you want a different epoch; it does not change the midnight UTC boundary.
+### macOS and Linux
 
-For a new database, initialize and apply migrations, then load the curated seed:
-
-```powershell
-flask --app run.py db init
-flask --app run.py db migrate -m "initial daily challenge backend"
-flask --app run.py db upgrade
-flask --app run.py seed
+```sh
+cd backend
+python3.12 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
 ```
 
-If `migrations/` already exists, skip `db init`. For an existing database, generate and inspect a migration after updating the models, then run `flask --app run.py db upgrade`. Do not use `db.create_all()` as a production schema update.
+### Database and API
 
-Start Flask locally with `flask --app run.py run --debug`. Health check: `GET /api/health`.
+Create a PostgreSQL database and a login role that owns it. Set `DATABASE_URL`
+in `.env` to that role’s connection URL and set a strong random `SECRET_KEY`.
+Set `FRONTEND_ORIGIN` to the frontend URL when running directly across origins.
+`APP_ENV=production` requires a secret of at least 32 characters.
+`DAILY_EPOCH_DATE` controls the day number and the reset remains midnight UTC.
+
+Apply the checked-in migrations, load the starter questions, and start Flask
+from `backend/` with the virtual environment active.
+
+```sh
+flask --app run.py db upgrade
+flask --app run.py seed
+flask --app run.py run
+```
+
+Run `flask --app run.py db current` to inspect the applied revision. For model
+changes, generate and inspect a new migration with `flask --app run.py db
+migrate -m "Describe the schema change"` before applying it. The API health
+endpoint is `GET /api/health`.
 
 ## API
 
@@ -55,7 +74,7 @@ Returns today's UTC date, stable day number, next reset instant, timing display 
   "resetAt": "2026-11-23T00:00:00Z",
   "questionCount": 7,
   "rules": {"roundCount": 7, "previewSeconds": 3, "answerSeconds": 25, "maxScore": 700},
-  "questions": [{"promptId": "p1", "prompt": "...", "difficulty": 1, "category": {"name": "...", "slug": "..."}}]
+  "questions": [{"promptId": "p1", "prompt": "...", "scope": "...", "difficulty": 1, "category": {"name": "...", "slug": "..."}}]
 }
 ```
 
@@ -101,4 +120,11 @@ Completes and records the run after the client finishes its seven rounds:
 
 ## Seed content
 
-`seed/questions.json` contains an initial bank of fourteen development prompts; each daily selects seven. Every prompt has six answer tiers. The rarity values are editorial starter values, not measured player-population statistics. Review factual answers and aliases before public launch. The seed command validates tier coverage, point values, and normalized answer/alias uniqueness before applying changes.
+The default seed loads the 100-prompt curated bank from
+`seed/curated_questions.json`. Each prompt has a complete answer set within
+its displayed scope. The first five tiers carry multiple answers and Root Key
+has one. The starter prompts are available via `flask --app run.py seed
+--bank starter` for development.
+
+See the [seed data plan](seed/SEED_DATA_PLAN.md) for source provenance,
+rebuilding the bank, and safe publication around the UTC reset.

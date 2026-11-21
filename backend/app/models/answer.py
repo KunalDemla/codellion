@@ -9,6 +9,7 @@ class AcceptedAnswer(db.Model):
     normalized = db.Column(db.String(256), nullable=False)
     rarity_tier = db.Column(db.Integer, nullable=False)
     points = db.Column(db.Integer, nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
     explanation = db.Column(db.Text)
     source_url = db.Column(db.Text)
     license_name = db.Column(db.String(120))

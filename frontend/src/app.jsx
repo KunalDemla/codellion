@@ -198,9 +198,9 @@ function ActiveRound({ game, dialogOpen, reducedMotion }) {
           </div>
           {round ? (
             <>
-              <div className="prompt-content">
+              <div className={round.prompt.scope ? "prompt-content has-scope" : "prompt-content"}>
                 <h1>{round.prompt.text}</h1>
-                <p>Obscure valid answers unlock higher tiers.</p>
+                <p>{round.prompt.scope || "Obscure valid answers unlock higher tiers."}</p>
               </div>
               <div className="answer-zone">
                 {isPreview || isDue ? (

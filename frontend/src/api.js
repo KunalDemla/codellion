@@ -2,7 +2,7 @@ import { RULES, scoreBand, TIERS } from './domain.js';
 
 const iso = time => new Date(time).toISOString();
 const problem = (message, code) => Object.assign(new Error(message), { code });
-const promptShape = ({ promptId, prompt, category }) => ({ id: promptId, text: prompt, topic: category?.name });
+const promptShape = ({ promptId, prompt, scope, category }) => ({ id: promptId, text: prompt, scope, topic: category?.name });
 const UTC_DAY_MS = 86_400_000;
 
 function readJson(storage, key, fallback) {

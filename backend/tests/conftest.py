@@ -9,7 +9,7 @@ def app():
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://", "GAME_QUESTION_COUNT": 7})
     with app.app_context():
         db.create_all()
-        seed_questions()
+        seed_questions("starter")
         # Keep the first seven curated questions in the fixture for predictable
         # prompt-level tests while production rotates the full bank.
         for question in Question.query.order_by(Question.id).offset(7).all():

@@ -1,83 +1,118 @@
 import json
+from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
+
+from sqlalchemy.orm import selectinload
+
 from app.extensions import db
-from app.models import Category, Question, AcceptedAnswer, AnswerAlias, GameSubmission
+from app.models import (
+    AcceptedAnswer, AnswerAlias, Category, DailyChallengeQuestion, GameSubmission, Question,
+)
 from app.services.answer_validator import normalize_answer
 
+SEED_DIR = Path(__file__).resolve().parents[1] / "seed"
+BANK_FILES = {"starter": "questions.json", "curated": "curated_questions.json"}
 TIER_POINTS = {1: 10, 2: 15, 3: 30, 4: 60, 5: 85, 6: 100}
 
-def validate_seed(items):
+
+def validate_seed(items, *, curated=False):
     if not isinstance(items, list) or len(items) < 7:
         raise ValueError("Seed data must contain at least seven questions.")
+    slugs = set()
     for item in items:
+        slug = item["slug"]
+        if len(slug) > 120 or slug in slugs:
+            raise ValueError(f"Invalid or duplicate question slug: {slug}.")
+        slugs.add(slug)
         answers = item.get("answers", [])
-        if len(answers) != 6:
-            raise ValueError(f"{item.get('slug')}: each question must have six scored answers.")
-        if {answer.get("rarity_tier") for answer in answers} != set(TIER_POINTS):
-            raise ValueError(f"{item.get('slug')}: tiers 1 through 6 must each appear once.")
+        tiers = Counter(answer.get("rarity_tier") for answer in answers)
+        if set(tiers) != set(TIER_POINTS) or tiers[6] != 1:
+            raise ValueError(f"{slug}: all six tiers are required, with exactly one Root Key.")
+        if curated and (len(answers) < 100 or not item.get("scope") or any(tiers[tier] < 2 for tier in range(1, 6))):
+            raise ValueError(f"{slug}: curated questions require a defined scope, 100 answers, and multiple answers in the first five tiers.")
         seen = set()
         for answer in answers:
             tier = answer["rarity_tier"]
             if answer.get("points") != TIER_POINTS[tier]:
-                raise ValueError(f"{item.get('slug')}: tier {tier} must score {TIER_POINTS[tier]} points.")
+                raise ValueError(f"{slug}: tier {tier} must score {TIER_POINTS[tier]} points.")
+            if curated and (urlsplit(answer.get("source_url", "")).scheme != "https" or not answer.get("license_name")):
+                raise ValueError(f"{slug}: answer provenance is required.")
             for text in [answer["canonical"], *answer.get("aliases", [])]:
-                normalized = normalize_answer(text)
-                if not normalized or normalized in seen:
-                    raise ValueError(f"{item.get('slug')}: duplicate or empty canonical answer/alias {text!r}.")
+                normalized = normalize_answer(text, item.get("case_sensitive", False))
+                if not normalized or normalized in seen or len(text) > 256 or len(normalized) > 256:
+                    raise ValueError(f"{slug}: duplicate, empty, or oversized canonical answer/alias {text!r}.")
                 seen.add(normalized)
 
-def seed_questions():
-    path = Path(__file__).resolve().parents[1] / "seed" / "questions.json"
-    items = json.loads(path.read_text(encoding="utf-8"))
-    validate_seed(items)
+
+def seed_questions(bank="curated"):
+    items = json.loads((SEED_DIR / BANK_FILES[bank]).read_text(encoding="utf-8"))
+    validate_seed(items, curated=bank == "curated")
+
+    slugs = [item["slug"] for item in items]
+    categories = {category.slug: category for category in Category.query.all()}
+    existing = {q.slug: q for q in Question.query.filter(Question.slug.in_(slugs)).options(
+        selectinload(Question.answers).selectinload(AcceptedAnswer.aliases),
+    )}
+    today = datetime.now(timezone.utc).date()
+    live_ids = {question_id for (question_id,) in db.session.query(DailyChallengeQuestion.question_id)
+        .filter_by(challenge_date=today)}
+    used_answers = {answer_id for (answer_id,) in db.session.query(GameSubmission.accepted_answer_id).distinct()}
+
     for item in items:
+        question = existing.get(item["slug"])
+        if question and question.id in live_ids:
+            continue
         cdata = item["category"]
-        category = Category.query.filter_by(slug=cdata["slug"]).first()
+        category = categories.get(cdata["slug"])
         if category is None:
             category = Category(slug=cdata["slug"], name=cdata["name"], description=cdata.get("description"))
+            categories[category.slug] = category
             db.session.add(category)
-            db.session.flush()
-        else:
-            category.name = cdata["name"]
-        question = Question.query.filter_by(slug=item["slug"]).first()
+
         if question is None:
-            question = Question(slug=item["slug"], prompt=item["prompt"], category=category)
+            question = Question(slug=item["slug"], category=category)
             db.session.add(question)
         question.prompt = item["prompt"]
         question.difficulty = item.get("difficulty", 1)
+        question.scope = item.get("scope")
+        question.case_sensitive = item.get("case_sensitive", False)
+        question.allow_fuzzy = item.get("allow_fuzzy", True)
         question.status = item.get("status", "approved")
         question.category = category
-        db.session.flush()
-        current_answer_norms = {normalize_answer(a["canonical"]) for a in item.get("answers", [])}
-        for a in item.get("answers", []):
-            canonical_norm = normalize_answer(a["canonical"])
-            answer = AcceptedAnswer.query.filter_by(question_id=question.id, normalized=canonical_norm).first()
+
+        unmatched = {answer.normalized: answer for answer in question.answers}
+        for entry in item["answers"]:
+            normalized = normalize_answer(entry["canonical"], question.case_sensitive)
+            answer = unmatched.pop(normalized, None)
             if answer is None:
-                answer = AcceptedAnswer(question=question, canonical=a["canonical"], normalized=canonical_norm,
-                    rarity_tier=a["rarity_tier"], points=a["points"])
-                db.session.add(answer)
-            answer.canonical = a["canonical"]
-            answer.rarity_tier = a["rarity_tier"]
-            answer.points = a["points"]
-            answer.explanation = a.get("explanation")
-            answer.source_url = a.get("source_url")
-            answer.license_name = a.get("license_name")
-            db.session.flush()
-            aliases = a.get("aliases", [])
-            alias_norms = {normalize_answer(text) for text in aliases}
-            for old_alias in list(answer.aliases):
-                if old_alias.normalized not in alias_norms:
-                    db.session.delete(old_alias)
-            for alias_text in aliases:
-                alias_norm = normalize_answer(alias_text)
-                existing = AnswerAlias.query.filter_by(answer_id=answer.id, normalized=alias_norm).first()
-                if existing is None:
-                    db.session.add(AnswerAlias(answer=answer, alias=alias_text, normalized=alias_norm))
-                else:
-                    existing.alias = alias_text
-        # Retire seed answers removed from the curated file when no historical
-        # submission depends on them. Keep referenced rows to preserve old runs.
-        for stale in list(AcceptedAnswer.query.filter_by(question_id=question.id).all()):
-            if stale.normalized not in current_answer_norms and not GameSubmission.query.filter_by(accepted_answer_id=stale.id).first():
-                db.session.delete(stale)
+                answer = AcceptedAnswer(normalized=normalized)
+                question.answers.append(answer)
+            answer.canonical = entry["canonical"]
+            answer.rarity_tier = entry["rarity_tier"]
+            answer.points = entry["points"]
+            answer.is_active = True
+            answer.explanation = entry.get("explanation")
+            answer.source_url = entry.get("source_url")
+            answer.license_name = entry.get("license_name")
+            existing_aliases = {alias.normalized: alias for alias in answer.aliases}
+            desired_aliases = []
+            for text in entry.get("aliases", []):
+                key = normalize_answer(text, question.case_sensitive)
+                alias = existing_aliases.get(key) or AnswerAlias(normalized=key)
+                alias.alias = text
+                desired_aliases.append(alias)
+            answer.aliases[:] = desired_aliases
+        for stale in unmatched.values():
+            if stale.id in used_answers:
+                stale.is_active = False
+                stale.aliases.clear()
+            else:
+                question.answers.remove(stale)
+
+    if bank == "curated":
+        starter = json.loads((SEED_DIR / BANK_FILES["starter"]).read_text(encoding="utf-8"))
+        starter_slugs = [item["slug"] for item in starter]
+        Question.query.filter(Question.slug.in_(starter_slugs)).update({Question.status: "retired"})
     db.session.commit()

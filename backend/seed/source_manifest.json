@@ -1,0 +1,114 @@
+{
+  "bcd": {
+    "url": "https://unpkg.com/@mdn/browser-compat-data@8.1.10/data.json",
+    "sha256": "3a3c921203de46636dea075d95616bee650463c0b3e1184df0c4e3b6d2c8cc27"
+  },
+  "linguist": {
+    "url": "https://raw.githubusercontent.com/github-linguist/linguist/cfd7a0113aa1efab99faeff38756f0ed4d48add8/lib/linguist/languages.yml",
+    "sha256": "05e20bd736808a9e468ae1546e1a3b518b95fa215ee6f746903f7e164a9fd37b"
+  },
+  "tldr": {
+    "url": "https://api.github.com/repos/tldr-pages/tldr/git/trees/41ea8214c82f3d16ab758bd8a41d85a559baae3e?recursive=1",
+    "sha256": "6e1b66dd88bab207223f52d2df7ab1944f135690168fd35ed5dd232f4c870c3b"
+  },
+  "license": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/json/licenses.json",
+    "sha256": "f8987d3db502e6e218749618cff130dfe8ea427b902f59512db3116a7394867b"
+  },
+  "debian": {
+    "url": "https://deb.debian.org/debian/dists/trixie/main/binary-amd64/Packages.xz",
+    "sha256": "be3d7d96a040eda0505c1808cccc67f183bbc05dff0842c50f88e6c396557412"
+  },
+  "debian-release": {
+    "url": "https://deb.debian.org/debian/dists/trixie/Release",
+    "sha256": "4a04448a82727a76452dbe2473b50f3d1f9ec5421fe7f3457b2b03b8673b1e8d"
+  },
+  "python": {
+    "url": "https://docs.python.org/3.12/objects.inv",
+    "sha256": "8745104c851435ca3dbb6fd47e11f5dfb6361d74500b32c04f3f6b23bc0e4673"
+  },
+  "java-types": {
+    "url": "https://docs.oracle.com/en/java/javase/21/docs/api/type-search-index.js",
+    "sha256": "00657bb3ee38398c217f18ec4037e3ea4826ab2331f36811dd0b65d019ad1a69"
+  },
+  "java-members": {
+    "url": "https://docs.oracle.com/en/java/javase/21/docs/api/member-search-index.js",
+    "sha256": "7d983434ae0c9d91a13db5ba2ed3232eee8e7ef8e2b8fd7fcefad7ecb7227725"
+  },
+  "node": {
+    "url": "https://nodejs.org/dist/v22.16.0/docs/api/all.json",
+    "sha256": "4a58ef11b3283e427f16bc49b3e7ebb2368b7044b5f94ccafcb5072278cae923"
+  },
+  "unicode": {
+    "url": "https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt",
+    "sha256": "2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c"
+  },
+  "unicode-names": {
+    "url": "https://www.unicode.org/Public/17.0.0/ucd/NameAliases.txt",
+    "sha256": "793f6f1e4d15fd90f05ae66460191dc4d75d1fea90136a25f30dd6a4cb950eac"
+  },
+  "unicode-blocks": {
+    "url": "https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt",
+    "sha256": "c0edefaf1a19771e830a82735472716af6bf3c3975f6c2a23ffbe2580fbbcb15"
+  },
+  "emoji": {
+    "url": "https://www.unicode.org/Public/17.0.0/emoji/emoji-test.txt",
+    "sha256": "1d8a944f88d7952f7ef7c5167fef3c67995bcae24543949710231b03a201acda"
+  },
+  "entities": {
+    "url": "https://html.spec.whatwg.org/entities.json",
+    "sha256": "d741d877ac77c4194c4ad526b5b4a19aef8dfe411ab840a466891cdbb9f362e6"
+  },
+  "charsets": {
+    "url": "https://www.iana.org/assignments/character-sets/character-sets-1.csv",
+    "sha256": "1de1a2784005b4a44707191422aa2a9903b5953bb20814a17bbe4f3d58f83fa8"
+  },
+  "protocols": {
+    "url": "https://www.iana.org/assignments/protocol-numbers/protocol-numbers-1.csv",
+    "sha256": "ba37fe0a4e01e45fe172f212ade37b908f4d56bbab0be9a97423bcfb9b8271a9"
+  },
+  "ports": {
+    "url": "https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.csv",
+    "sha256": "79efcd64d4c5f86fdf9020f7d3fd40bd21711e11db4a45f54cd2da0ca6d89659"
+  },
+  "image": {
+    "url": "https://www.iana.org/assignments/media-types/image.csv",
+    "sha256": "48c2a51460c805a3ff8debcdd01d7b3ac6dbcd031ada36cc55072d8858a107cb"
+  },
+  "audio": {
+    "url": "https://www.iana.org/assignments/media-types/audio.csv",
+    "sha256": "199905242db71fb66e591f4e076b8722477c8c2aab70bbff4cbed37e70a276b6"
+  },
+  "video": {
+    "url": "https://www.iana.org/assignments/media-types/video.csv",
+    "sha256": "bcb4e49f2c98db2d8229ace964c5167a7b870e795028d6a7fe5fd568e4571131"
+  },
+  "application": {
+    "url": "https://www.iana.org/assignments/media-types/application.csv",
+    "sha256": "d4e473cb1a811124d2c83f99e80e29be81fab402e08cbd40a4e04136c8a10588"
+  },
+  "text": {
+    "url": "https://www.iana.org/assignments/media-types/text.csv",
+    "sha256": "09a631d2800d011303a830d32b3c29d43f3c91e787baf99f9e194cd750b22b82"
+  },
+  "sqlite": {
+    "url": "https://www.sqlite.org/lang_keywords.html",
+    "sha256": "0cb8b8361365c28b9186d3358c27d73bcbbfa7902fe8cd6a57acb0d5adf91745"
+  },
+  "git": {
+    "url": "https://raw.githubusercontent.com/git/git/v2.50.1/command-list.txt",
+    "sha256": "beacd985177284e8b00ec3b48140566055a6a875de0c529e39851089c5758986"
+  },
+  "css-colors": {
+    "url": "https://raw.githubusercontent.com/w3c/csswg-drafts/main/css-color-4/Overview.bs",
+    "sha256": "994100798b8c585a60b3df340b5417941d4c3b537b34879c1eac68f47e578232"
+  },
+  "caniuse": {
+    "url": "https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json",
+    "sha256": "e4c207615e486f65c525e5d3ddc878ad1b08044f5efd8fccf012c470dcdaefcc"
+  },
+  "git-config": {
+    "url": "https://git-scm.com/docs/git-config/2.50.0",
+    "sha256": "1f12310ec451c265428decbbf793d9561dd908cdd357d86365513583f2ea38f1"
+  }
+}

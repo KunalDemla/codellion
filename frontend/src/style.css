@@ -101,6 +101,7 @@ p, h1, h2 { margin: 0; }
 .topic-label { text-transform: none; padding: 5px 8px; color: #b5c8af; background: #1e2c20; border: 1px solid #344835; border-radius: 5px; font-size: .69rem; letter-spacing: 0; }
 .prompt-content { flex: 1; display: grid; align-content: center; min-height: 210px; padding: 29px 34px; }
 .prompt-content h1, .reveal-content h1 { max-width: 15ch; font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1.02; letter-spacing: -.06em; font-weight: 710; overflow-wrap: anywhere; }
+.has-scope h1 { max-width: 25ch; font-size: clamp(1.8rem, 4.2vw, 3rem); }
 .prompt-content p, .reveal-content p:not(.eyebrow) { margin-top: 15px; color: var(--muted); line-height: 1.5; }
 .answer-zone { display: grid; align-content: start; min-height: 178px; padding: 14px 25px 17px; border-top: 1px solid var(--line); background: #101612; }
 .timer-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--dim); font: 580 .71rem var(--mono); }
