@@ -37,7 +37,8 @@ export function createQuizApi({
   clock = Date.now, fetcher = fetch,
 }) {
   const base = baseUrl.trim().replace(/\/+$/, '');
-  const storageKey = 'root-access:codellion:v1:' + base;
+  storage.removeItem('root-access:codellion:v1:' + base);
+  const storageKey = 'root-access:codellion:v2:' + base;
   const read = () => readJson(storage, storageKey, { playerId: null, runs: {} });
   const write = state => storage.setItem(storageKey, JSON.stringify(state));
   let daily;
