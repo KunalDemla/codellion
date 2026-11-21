@@ -10,6 +10,14 @@ function readJson(storage, key, fallback) {
   return value ? JSON.parse(value) : fallback;
 }
 
+export function newQuizId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');
+}
+
 function stats(history, dayNumber) {
   const played = history.length;
   const days = new Set(history.map(run => run.dayNumber));
@@ -40,7 +48,7 @@ export function createQuizApi({
   function player() {
     const state = read();
     if (!state.playerId) {
-      state.playerId = crypto.randomUUID();
+      state.playerId = newQuizId();
       write(state);
     }
     return state.playerId;
@@ -180,7 +188,7 @@ export function createQuizApi({
       const previous = read().runs[date];
       if (previous?.started) return snapshot(await reconcile(previous));
       const run = previous || {
-        id: crypto.randomUUID(), ...daily, version: 0, rounds: [], score: 0, completedAt: null, started: false,
+        id: newQuizId(), ...daily, version: 0, rounds: [], score: 0, completedAt: null, started: false,
       };
       if (!previous) storeRun(run);
       await request('/games', { date, playerId: player(), runId: run.id });

@@ -70,7 +70,7 @@ export function useDaily(preferences) {
 
   const refresh = useCallback(async (id, forceDraft = false) => {
     const payload = await api.run(id);
-    apply(payload, { forceDraft });
+    if (current.current?.id === id) apply(payload, { forceDraft });
   }, [apply]);
 
   useEffect(() => { void load(); }, [load]);
@@ -117,9 +117,10 @@ export function useDaily(preferences) {
 
   async function save(activeRun, value) {
     try {
-      apply(await api.saveDraft(activeRun.id, activeRun.currentRound.number, {
+      const saved = await api.saveDraft(activeRun.id, activeRun.currentRound.number, {
         text: value.text, revision: value.revision,
-      }));
+      });
+      if (current.current?.id === activeRun.id) apply(saved);
     } catch (cause) {
       const latest = draftRef.current;
       if (latest.key !== value.key || latest.revision !== value.revision || locked.current) return;
