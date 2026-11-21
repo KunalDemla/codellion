@@ -10,7 +10,7 @@ def app():
     with app.app_context():
         db.create_all()
         seed_questions("starter")
-        # Keep the first seven curated questions in the fixture for predictable
+        # Keep the first seven starter questions in the fixture for predictable
         # prompt-level tests while production rotates the full bank.
         for question in Question.query.order_by(Question.id).offset(7).all():
             question.status = "draft"

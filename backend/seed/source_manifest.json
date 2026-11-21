@@ -15,61 +15,25 @@
     "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/json/licenses.json",
     "sha256": "f8987d3db502e6e218749618cff130dfe8ea427b902f59512db3116a7394867b"
   },
-  "debian": {
-    "url": "https://deb.debian.org/debian/dists/trixie/main/binary-amd64/Packages.xz",
-    "sha256": "be3d7d96a040eda0505c1808cccc67f183bbc05dff0842c50f88e6c396557412"
-  },
-  "debian-release": {
-    "url": "https://deb.debian.org/debian/dists/trixie/Release",
-    "sha256": "4a04448a82727a76452dbe2473b50f3d1f9ec5421fe7f3457b2b03b8673b1e8d"
-  },
-  "python": {
-    "url": "https://docs.python.org/3.12/objects.inv",
-    "sha256": "8745104c851435ca3dbb6fd47e11f5dfb6361d74500b32c04f3f6b23bc0e4673"
-  },
-  "java-types": {
-    "url": "https://docs.oracle.com/en/java/javase/21/docs/api/type-search-index.js",
-    "sha256": "00657bb3ee38398c217f18ec4037e3ea4826ab2331f36811dd0b65d019ad1a69"
-  },
-  "java-members": {
-    "url": "https://docs.oracle.com/en/java/javase/21/docs/api/member-search-index.js",
-    "sha256": "7d983434ae0c9d91a13db5ba2ed3232eee8e7ef8e2b8fd7fcefad7ecb7227725"
-  },
-  "node": {
-    "url": "https://nodejs.org/dist/v22.16.0/docs/api/all.json",
-    "sha256": "4a58ef11b3283e427f16bc49b3e7ebb2368b7044b5f94ccafcb5072278cae923"
-  },
-  "unicode": {
-    "url": "https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt",
-    "sha256": "2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c"
-  },
-  "unicode-names": {
-    "url": "https://www.unicode.org/Public/17.0.0/ucd/NameAliases.txt",
-    "sha256": "793f6f1e4d15fd90f05ae66460191dc4d75d1fea90136a25f30dd6a4cb950eac"
-  },
-  "unicode-blocks": {
-    "url": "https://www.unicode.org/Public/17.0.0/ucd/Blocks.txt",
-    "sha256": "c0edefaf1a19771e830a82735472716af6bf3c3975f6c2a23ffbe2580fbbcb15"
-  },
-  "emoji": {
-    "url": "https://www.unicode.org/Public/17.0.0/emoji/emoji-test.txt",
-    "sha256": "1d8a944f88d7952f7ef7c5167fef3c67995bcae24543949710231b03a201acda"
-  },
-  "entities": {
-    "url": "https://html.spec.whatwg.org/entities.json",
-    "sha256": "d741d877ac77c4194c4ad526b5b4a19aef8dfe411ab840a466891cdbb9f362e6"
+  "ports": {
+    "url": "https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.csv",
+    "sha256": "79efcd64d4c5f86fdf9020f7d3fd40bd21711e11db4a45f54cd2da0ca6d89659"
   },
   "charsets": {
     "url": "https://www.iana.org/assignments/character-sets/character-sets-1.csv",
     "sha256": "1de1a2784005b4a44707191422aa2a9903b5953bb20814a17bbe4f3d58f83fa8"
   },
-  "protocols": {
-    "url": "https://www.iana.org/assignments/protocol-numbers/protocol-numbers-1.csv",
-    "sha256": "ba37fe0a4e01e45fe172f212ade37b908f4d56bbab0be9a97423bcfb9b8271a9"
+  "git": {
+    "url": "https://raw.githubusercontent.com/git/git/v2.50.1/command-list.txt",
+    "sha256": "beacd985177284e8b00ec3b48140566055a6a875de0c529e39851089c5758986"
   },
-  "ports": {
-    "url": "https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.csv",
-    "sha256": "79efcd64d4c5f86fdf9020f7d3fd40bd21711e11db4a45f54cd2da0ca6d89659"
+  "sqlite": {
+    "url": "https://www.sqlite.org/lang_keywords.html",
+    "sha256": "0cb8b8361365c28b9186d3358c27d73bcbbfa7902fe8cd6a57acb0d5adf91745"
+  },
+  "css-colors": {
+    "url": "https://raw.githubusercontent.com/w3c/csswg-drafts/main/css-color-4/Overview.bs",
+    "sha256": "994100798b8c585a60b3df340b5417941d4c3b537b34879c1eac68f47e578232"
   },
   "image": {
     "url": "https://www.iana.org/assignments/media-types/image.csv",
@@ -91,24 +55,60 @@
     "url": "https://www.iana.org/assignments/media-types/text.csv",
     "sha256": "09a631d2800d011303a830d32b3c29d43f3c91e787baf99f9e194cd750b22b82"
   },
-  "sqlite": {
-    "url": "https://www.sqlite.org/lang_keywords.html",
-    "sha256": "0cb8b8361365c28b9186d3358c27d73bcbbfa7902fe8cd6a57acb0d5adf91745"
+  "http-fields": {
+    "url": "https://www.iana.org/assignments/http-fields/field-names.csv",
+    "sha256": "4f96c608a02ea36f82359e3b2c39fb3768b4267a7c88d524ea5d3bd6217c901f"
   },
-  "git": {
-    "url": "https://raw.githubusercontent.com/git/git/v2.50.1/command-list.txt",
-    "sha256": "beacd985177284e8b00ec3b48140566055a6a875de0c529e39851089c5758986"
+  "http-status": {
+    "url": "https://www.iana.org/assignments/http-status-codes/http-status-codes-1.csv",
+    "sha256": "6098f56a5f25ca050313838886090a5e58a40ca72c2b44eb19d5ac7c9f6b4896"
   },
-  "css-colors": {
-    "url": "https://raw.githubusercontent.com/w3c/csswg-drafts/main/css-color-4/Overview.bs",
-    "sha256": "994100798b8c585a60b3df340b5417941d4c3b537b34879c1eac68f47e578232"
+  "http-methods": {
+    "url": "https://www.iana.org/assignments/http-methods/methods.csv",
+    "sha256": "4614642d572a630c355f182126bd92dd5a43d398b3dc64cad9ce88826613823a"
   },
-  "caniuse": {
-    "url": "https://raw.githubusercontent.com/Fyrd/caniuse/main/data.json",
-    "sha256": "e4c207615e486f65c525e5d3ddc878ad1b08044f5efd8fccf012c470dcdaefcc"
+  "uri-schemes": {
+    "url": "https://www.iana.org/assignments/uri-schemes/uri-schemes-1.csv",
+    "sha256": "d77a2ec43ab4c7ac920d6c2310dbc882bad3370353f4a4b598de827341a41442"
   },
-  "git-config": {
-    "url": "https://git-scm.com/docs/git-config/2.50.0",
-    "sha256": "1f12310ec451c265428decbbf793d9561dd908cdd357d86365513583f2ea38f1"
+  "dns-root": {
+    "url": "https://www.iana.org/domains/root/db",
+    "sha256": "56b2406296f98da756869a7efcf25bbb48e62eb4366a8cf63c92538fa4572f14"
+  },
+  "mime-db": {
+    "url": "https://github.com/jshttp/mime-db/raw/refs/tags/v1.54.0/db.json",
+    "sha256": "96b8a5746867c832ab56743c05e46e73c9facb04879677df0b356f20496cb6cd"
+  },
+  "sqlite-functions": {
+    "url": "https://www.sqlite.org/lang_corefunc.html",
+    "sha256": "7250cc990c3b5fcbe23a64eb4fc16c463b18a9ba209dff92aa39103e2f32ea42"
+  },
+  "database-ranking": {
+    "url": "https://db-engines.com/en/ranking",
+    "sha256": "467237c5af9f8a3abb3ff9b037860dbf0a9081bc4b0728163b3718cf46369945"
+  },
+  "go-platforms": {
+    "url": "https://raw.githubusercontent.com/golang/go/go1.24.0/src/internal/platform/zosarch.go",
+    "sha256": "ada0d7df7304b4df6f03e90982428823feab16619c17dded138b28e8acf1bac1"
+  },
+  "scripts": {
+    "url": "https://www.unicode.org/Public/17.0.0/ucd/PropertyValueAliases.txt",
+    "sha256": "64e9a5f76f7a1e8b5a47d6a1f9a26522a251208f5276bdfa1559dac7cf2e827a"
+  },
+  "sqlite-aggregates": {
+    "url": "https://www.sqlite.org/lang_aggfunc.html",
+    "sha256": "e7697bd9db597d9d7de0b65f9d5c2e631f1d091ed6e809a3ec05cc229bdb0577"
+  },
+  "postgres-types": {
+    "url": "https://www.postgresql.org/docs/17/datatype.html",
+    "sha256": "3fa5de06d82a997b9f1eded3e7364abf3d0437224691c46b3ba880a1fdce68b4"
+  },
+  "nist-types": {
+    "url": "https://xlinux.nist.gov/dads/termsType.html",
+    "sha256": "2a7f1dd96a0e053079cdd57db2b2ff4de44fa16d156529b14ab2b2cf1daff4ad"
+  },
+  "nist-areas": {
+    "url": "https://xlinux.nist.gov/dads/termsArea.html",
+    "sha256": "9b3b5ef1e13ae884c4bfb694dd88837f4774ef20f96adb93342508341458130d"
   }
 }

@@ -46,7 +46,7 @@ Set `FRONTEND_ORIGIN` to the frontend URL when running directly across origins.
 `APP_ENV=production` requires a secret of at least 32 characters.
 `DAILY_EPOCH_DATE` controls the day number and the reset remains midnight UTC.
 
-Apply the checked-in migrations, load the starter questions, and start Flask
+Apply the checked-in migrations, load the curated questions, and start Flask
 from `backend/` with the virtual environment active.
 
 ```sh
@@ -122,8 +122,8 @@ Completes and records the run after the client finishes its seven rounds:
 
 The default seed loads the 100-prompt curated bank from
 `seed/curated_questions.json`. Each prompt has a complete answer set within
-its displayed scope. The first five tiers carry multiple answers and Root Key
-has one. The starter prompts are available via `flask --app run.py seed
+its displayed scope. Answer counts vary with the topic. The first five tiers
+carry multiple answers and Root Key has one. The starter prompts are available via `flask --app run.py seed
 --bank starter` for development.
 
 See the [seed data plan](seed/SEED_DATA_PLAN.md) for source provenance,

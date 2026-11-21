@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.extensions import db
 from app.models import (
-    AcceptedAnswer, AnswerAlias, Category, DailyChallengeQuestion, GameSubmission, Question,
+    AcceptedAnswer, AnswerAlias, Category, DailyChallenge, DailyChallengeQuestion, Game, GameSubmission, Question,
 )
 from app.services.answer_validator import normalize_answer
 
@@ -30,8 +30,8 @@ def validate_seed(items, *, curated=False):
         tiers = Counter(answer.get("rarity_tier") for answer in answers)
         if set(tiers) != set(TIER_POINTS) or tiers[6] != 1:
             raise ValueError(f"{slug}: all six tiers are required, with exactly one Root Key.")
-        if curated and (len(answers) < 100 or not item.get("scope") or any(tiers[tier] < 2 for tier in range(1, 6))):
-            raise ValueError(f"{slug}: curated questions require a defined scope, 100 answers, and multiple answers in the first five tiers.")
+        if curated and (not item.get("scope") or any(tiers[tier] < 2 for tier in range(1, 6))):
+            raise ValueError(f"{slug}: curated questions require a defined scope and multiple answers in the first five tiers.")
         seen = set()
         for answer in answers:
             tier = answer["rarity_tier"]
@@ -114,5 +114,16 @@ def seed_questions(bank="curated"):
     if bank == "curated":
         starter = json.loads((SEED_DIR / BANK_FILES["starter"]).read_text(encoding="utf-8"))
         starter_slugs = [item["slug"] for item in starter]
-        Question.query.filter(Question.slug.in_(starter_slugs)).update({Question.status: "retired"})
+        managed = Question.slug.in_(starter_slugs) | Question.slug.like("curated-%")
+        Question.query.filter(managed, Question.slug.not_in(slugs)).update({Question.status: "retired"})
+
+        # Future API previews may have materialized lineups before publication.
+        # Preserve the current daily, all past dates, and any lineup tied to a run.
+        previews = DailyChallenge.query.filter(
+            DailyChallenge.challenge_date > today,
+            ~DailyChallenge.challenge_date.in_(db.select(Game.challenge_date)),
+            DailyChallenge.questions.any(DailyChallengeQuestion.question.has(Question.status == "retired")),
+        )
+        for challenge in previews:
+            db.session.delete(challenge)
     db.session.commit()
