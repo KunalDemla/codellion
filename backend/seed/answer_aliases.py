@@ -2,6 +2,8 @@
 
 import re
 
+from reviewed_aliases import REVIEWED_ALIASES
+
 
 TREE_ALIASES = {
     "binary tree": ("BT",),
@@ -497,6 +499,9 @@ NAMED_CATALOGS = {
     "cms", "analytics-tools",
 }
 EXCLUDED_ALIASES = {
+    "windows-commands": {"erase"},  # CMD del and PowerShell Remove-Item differ.
+    "programming-languages": {"emacs", "nixos", "node", "nvim", "rake", "vim"},
+    "network-services": {"Business Continuity Servi", "Gateway Load Balancing Pr", "Node Initiated Network Association Forma"},
     "data-formats": {
         "hash", "hashes", "raw", "sum", "sums",
         "traveling salesman problem", "travelling salesman problem",
@@ -514,6 +519,20 @@ SEPARATED_NAMES = {
 CAMEL_CASE_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
 GNU_LICENSE = re.compile(r"((?:A|L)?GPL)-(\d+\.\d+)-(only|or-later)")
 VERSIONED_LICENSE = re.compile(r"([A-Za-z][\w-]+)-(\d+(?:\.\d+)+[a-z]?)")
+HTML_VOID_ELEMENTS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+CSS_COLOR_PARTS = re.compile(
+    r"^(light|medium|dark|pale|deep|dim|hot|ghost|mint|misty|old|peach|powder|royal|saddle|sandy|rebecca|"
+    r"alice|antique|blanched|cadet|cornflower|dodger|floral|forest|goldenrod|indian|lavender|lawn|lemon|midnight|"
+    r"navajo|olive|orange|rosy|sea|sky|slate|spring|steel|green|yellow|blue|white)"
+    r"(blue|white|green|black|red|gray|grey|cyan|violet|pink|brown|blush|lace|puff|cream|rose|"
+    r"khaki|almond|chiffon|salmon|magenta|orchid|turquoise|orange|aquamarine|yellow|smoke|"
+    r"goldenrod|goldenrodyellow|olivegreen|slategray|slategrey|slateblue|seagreen|skyblue|steelblue|springgreen|violetred)$"
+)
+
+
+def color_words(name):
+    parts = CSS_COLOR_PARTS.fullmatch(name)
+    return [parts[1], *color_words(parts[2])] if parts else [name]
 
 
 def license_aliases(name):
@@ -562,6 +581,44 @@ def formatting_aliases(slug, name):
         yield "GOARCH=" + ("386" if name == "x86" else name)
         return
 
+    if slug == "target-platforms":
+        yield "GOOS=" + name
+    elif slug.endswith("-extensions"):
+        yield "*" + name
+    elif slug == "html-elements":
+        yield f"<{name} />" if name in HTML_VOID_ELEMENTS else f"</{name}>"
+        if name in HTML_VOID_ELEMENTS:
+            yield f"<{name}/>"
+    elif slug == "css-colors":
+        words = color_words(name)
+        if len(words) > 1:
+            yield " ".join(words)
+            yield "-".join(words)
+    elif slug == "dom-events":
+        yield name + " event"
+    elif slug == "shell-variables" and re.fullmatch(r"[a-zA-Z_]\w*(?:\[\d+\])?", name):
+        yield "${" + name + "}"
+        if "[" not in name:
+            yield "$" + name
+    elif slug == "c-headers":
+        yield "#include <" + name + ">"
+        yield name.removesuffix(".h")
+    elif slug == "python-builtins":
+        yield "builtins." + name
+        yield "builtins." + name + "()"
+    elif slug in {"python-modules", "python-file-modules"}:
+        yield "import " + name
+    elif slug == "git-hooks":
+        yield ".git/hooks/" + name
+    elif slug == "linux-syscalls":
+        yield "SYS_" + name
+        yield "__NR_" + name
+    elif slug == "dns-records":
+        yield name + " record"
+        yield "DNS " + name
+    elif slug == "media-types":
+        yield "Content-Type: " + name
+
     if slug == "http-headers":
         yield name + ":"
     elif slug == "python-types":
@@ -606,10 +663,10 @@ def formatting_aliases(slug, name):
 
 
 def additional_aliases(slug, rows, normalize):
-    explicit = {normalize(name): aliases for name, aliases in ALIASES.get(slug, {}).items()}
-    return {
-        normalize(row.name): [
-            *explicit.get(normalize(row.name), ()), *formatting_aliases(slug, row.name),
-        ]
-        for row in rows
-    }
+    explicit = {}
+    for groups in (ALIASES, REVIEWED_ALIASES):
+        for name, aliases in groups.get(slug, {}).items():
+            explicit.setdefault(normalize(name), []).extend(aliases)
+    for row in rows:
+        key = normalize(row.name)
+        yield key, [*explicit.get(key, ()), *formatting_aliases(slug, row.name)]

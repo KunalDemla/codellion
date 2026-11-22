@@ -8,6 +8,8 @@ from xml.etree import ElementTree
 
 import yaml
 
+from catalog_aliases import bcd_aliases, domain_aliases, js_member_aliases, nist_aliases, registered_expansion
+
 
 MDN = "https://developer.mozilla.org/docs/Web/"
 PYTHON = "https://docs.python.org/3.12/library/"
@@ -68,7 +70,7 @@ def web(bank, answer_type):
             link = entry["__compat"].get("mdn_url", "")
             if not link.startswith(source + "/") or link.rsplit("/", 1)[-1] != name:
                 continue
-            variants = [f"{owner}.{name}", name + "()"]
+            variants = list(js_member_aliases(owner, name, entry))
             if owner in {"Array", "String", "Date"}:
                 variants.append(f"{owner}.prototype.{name}")
             rows.append(answer_type(name, link, variants))
@@ -81,7 +83,7 @@ def web(bank, answer_type):
         if ready(entry):
             url = entry["__compat"].get("mdn_url", "")
             if url.rsplit("/", 1)[-1].startswith("::"):
-                pseudo.append(answer_type(name, url, ["::" + name, "::" + name + "()"]))
+                pseudo.append(answer_type(name, url, ["::" + name, "::" + name + "()", *bcd_aliases(name, entry)]))
     bank.add("css-pseudo-elements", "CSS", "Name a CSS pseudo-element.",
              "Use a current pseudo-element in MDN. The double colon is optional.", pseudo, BCD,
              common="before|after|first-letter|first-line|selection|placeholder|marker", root="file-selector-button")
@@ -109,7 +111,8 @@ def web(bank, answer_type):
         for name in re.findall(r"^    (\w+)(?:<[^\n]*?>)?\(", section, re.M):
             if name not in methods:
                 methods[name] = answer_type(name, MDN + "API/" + owner + "/" + name, [name + "()"])
-            methods[name].aliases.append(owner + "." + name)
+            qualified = owner + "." + name
+            methods[name].aliases.extend((qualified, qualified + "()"))
     bank.add("dom-methods", "Web APIs", "Name a DOM method for working with a page.",
              "Use a method from the standard DOM node, element, document, or event-target interfaces, including their node mixins.",
              methods.values(), IDENTIFIERS,
@@ -293,9 +296,10 @@ def references(bank, answer_type):
          "Use a scheme name listed in IANA’s HTTP authentication registry.",
          "http-auth", "Authentication Scheme Name", "http-authschemes", "Basic|Bearer|Digest|Negotiate|HOBA", "SCRAM-SHA-256"),
     ]:
-        values = (row[column] for row in bank.csv(key) if row[column] and row[column].casefold()
+        values = (answer_type(row[column], IANA + path, registered_expansion(row[column], row.get("Meaning", "")))
+                  for row in bank.csv(key) if row[column] and row[column].casefold()
                   not in {"unassigned", "reserved", "private use", "reserved for future use", "*"})
-        bank.plain(slug, category, prompt, scope, values, IANA + path, IDENTIFIERS, common=anchors, root=featured)
+        bank.add(slug, category, prompt, scope, values, IDENTIFIERS, common=anchors, root=featured)
 
     aliases = {
         "pypi": ["Python Package Index", "pip"], "npm": ["Node Package Manager"], "cargo": ["crates.io"],
@@ -313,7 +317,7 @@ def references(bank, answer_type):
         match = re.search(r'/domains/root/db/[^"\']+["\']>\s*(\.[^<\s]+)', row)
         if match and "domain-generic." in row:
             name = html.unescape(match[1])
-            countries.append(answer_type(name, "https://www.iana.org/domains/root/db", [name[1:]]))
+            countries.append(answer_type(name, "https://www.iana.org/domains/root/db", list(domain_aliases(name))))
     bank.add("generic-domains", "DNS", "Name a generic top-level domain.",
              "Use a domain in IANA’s generic category. Country-code domains have a separate category.",
              countries, IDENTIFIERS, common=".com|.org|.net|.info|.xyz|.app|.dev", root=".museum")
@@ -325,6 +329,7 @@ def references(bank, answer_type):
               for name in window_functions),
              IDENTIFIERS, common="row_number|rank|dense_rank|lag|lead", root="nth_value")
 
+    term_aliases = nist_aliases(bank.text("nist-terms"))
     for slug, type_name, scope, anchors, featured in [
         ("graph-algorithms", "graph", "Use a named algorithm in the NIST graph algorithms index.",
          "breadth-first search|depth-first search|Dijkstra's algorithm|Kruskal's algorithm|Floyd-Warshall algorithm", "Boruvka's algorithm"),
@@ -345,6 +350,8 @@ def references(bank, answer_type):
                 continue
             name = html.unescape(re.sub("<[^>]+>", "", label))
             variants = [name.replace("-", " ")]
+            if slug != "tree-structures":
+                variants.extend(term_aliases.get(link, []))
             if name == "breadth-first search":
                 variants.append("BFS")
             if name == "depth-first search":

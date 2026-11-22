@@ -177,3 +177,45 @@ def test_reviewed_aliases_preserve_distinctions_between_answers():
         for alias, canonical in cases.items():
             assert labels[normalize_answer(alias, item["case_sensitive"])] == canonical
         assert invalid.get(slug, set()).isdisjoint(labels)
+
+
+def test_aliases_across_reference_catalogs():
+    accepted = {
+        "html-elements": {"anchor tag": "a", "<hr/>": "hr", "</section>": "section"},
+        "css-colors": {"dark grey": "darkgrey", "dark gray": "darkgray"},
+        "css-properties": {"-webkit-transform": "transform"},
+        "dom-methods": {"document.getElementById()": "getElementById"},
+        "js-members": {"Array.prototype.map()": "map"},
+        "programming-languages": {"C-sharp": "C#", "C plus plus": "C++", "Visual Basic for Applications": "VBA"},
+        "python-types": {"integer": "int", "string": "str"},
+        "python-modules": {"import json": "json"},
+        "database-engines": {"MemSQL": "SingleStore", "PrestoDB": "Presto", "PrestoSQL": "Trino"},
+        "windows-commands": {"gci": "get-childitem", "dir": "dir"},
+        "network-services": {"WHOIS": "nicname", "CoAP": "coap", "Constrained Application Protocol": "coap"},
+        "character-encodings": {"cp932": "Windows-31J", "MS_Kanji": "Shift_JIS", "latin1": "ISO-8859-1"},
+        "source-extensions": {"*.py": ".py"},
+        "country-domains": {"xn--h2brj9c": ".भारत", "xn--fiqs8s.": ".中国"},
+        "media-types": {"application/x-gzip": "application/gzip", "Content-Type: application/json": "application/json"},
+        "search-algorithms": {"dichotomic search": "binary search"},
+        "c-headers": {"#include <stdio.h>": "stdio.h"},
+        "linux-syscalls": {"__NR_open": "open"},
+        "monitoring-tools": {"OTel": "OpenTelemetry"},
+    }
+    invalid = {
+        "programming-languages": {"node", "rake"},
+        "python-keywords": {"true"},
+        "windows-commands": {"erase"},
+        "network-services": {"443", "gateway load balancing pr"},
+        "media-types": {".json"},
+        "source-extensions": {"python"},
+    }
+    bank = {item["slug"].removeprefix("curated-basics-"): item for item in load_bank()}
+    for slug in accepted.keys() | invalid.keys():
+        item = bank[slug]
+        labels = {
+            normalize_answer(text, item["case_sensitive"]): answer["canonical"]
+            for answer in item["answers"] for text in (answer["canonical"], *answer["aliases"])
+        }
+        for alias, canonical in accepted.get(slug, {}).items():
+            assert labels[normalize_answer(alias, item["case_sensitive"])] == canonical
+        assert invalid.get(slug, set()).isdisjoint(labels)

@@ -11,6 +11,14 @@
     "url": "https://api.github.com/repos/tldr-pages/tldr/git/trees/41ea8214c82f3d16ab758bd8a41d85a559baae3e?recursive=1",
     "sha256": "6e1b66dd88bab207223f52d2df7ab1944f135690168fd35ed5dd232f4c870c3b"
   },
+  "powershell-aliases": {
+    "url": "https://raw.githubusercontent.com/PowerShell/PowerShell/v7.5.4/src/System.Management.Automation/engine/InitialSessionState.cs",
+    "sha256": "9343cde128b71d256458a3dd36ed724146614ee38a2082c4e27d0fa13970a3a2"
+  },
+  "nist-terms": {
+    "url": "https://xlinux.nist.gov/dads/terms.html",
+    "sha256": "c07bdcfb15d784d22b6f9724357b5eaf9c97119cccfd88906bf681e23571c497"
+  },
   "license": {
     "url": "https://raw.githubusercontent.com/spdx/license-list-data/ab9b0904b43db6f4b67431efd8821feb821f1c8b/json/licenses.json",
     "sha256": "f8987d3db502e6e218749618cff130dfe8ea427b902f59512db3116a7394867b"

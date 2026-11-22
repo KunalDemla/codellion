@@ -22,6 +22,9 @@ SEED = Path(__file__).resolve().parent
 sys.path.insert(0, str(SEED.parent))
 from app.services.answer_validator import normalize_answer
 from answer_aliases import EXCLUDED_ALIASES, additional_aliases
+from catalog_aliases import (
+    bcd_aliases, charset_aliases, domain_aliases, js_member_aliases, nist_aliases, powershell_aliases, registered_expansion,
+)
 from named_prompts import extra_catalogs
 
 POINTS = (10, 15, 30, 60, 85, 100)
@@ -93,7 +96,7 @@ class Bank:
         source_alias_counts = Counter()
         for name, row in by_name.items():
             source_alias_counts.update({normalize(alias) for alias in row.aliases} - {name, ""})
-        additions = additional_aliases(slug, by_name.values(), normalize)
+        additions = dict(additional_aliases(slug, by_name.values(), normalize))
         excluded = {normalize(alias) for alias in EXCLUDED_ALIASES.get(slug, ())}
         alias_counts = Counter()
         for candidates in additions.values():
@@ -148,7 +151,7 @@ def web(bank):
     html_elements = MDN + "HTML/Reference/Elements"
     bank.add("html-elements", "HTML", "Name an HTML element.",
              "Use a current element in the MDN list. A bare name or an opening tag works.",
-             (Answer(name, reference(node, html_elements), [f"<{name}>"])
+             (Answer(name, reference(node, html_elements), [f"<{name}>", *bcd_aliases(name, node)])
               for name, node in documented(data["html"]["elements"]).items()),
              BCD, common="div|p|a|span|img|input|button|h1|form|table", root="wbr")
     attributes = {}
@@ -159,7 +162,8 @@ def web(bank):
             spec = meta.get("spec_url", [])
             refs = [spec] if isinstance(spec, str) else spec
             if name in data["html"]["global_attributes"] or "#attr-" in url or any("#attr-" in ref for ref in refs):
-                attributes.setdefault(name, Answer(name, reference(node, html_elements)))
+                answer = attributes.setdefault(name, Answer(name, reference(node, html_elements)))
+                answer.aliases.extend(bcd_aliases(name, node))
     inputs = documented(data["html"]["elements"]["input"])
     bank.plain("html-input-types", "HTML", "Name a type of HTML input.",
                "Give a current type value for the input element, such as a field, picker, or button.",
@@ -172,7 +176,7 @@ def web(bank):
     css = documented(data["css"]["properties"])
     bank.add("css-properties", "CSS", "Name a CSS property.",
              "Use a current property in the MDN list. Custom properties are excluded.",
-             (Answer(name, reference(node, MDN + "CSS/Reference/Properties"))
+             (Answer(name, reference(node, MDN + "CSS/Reference/Properties"), list(bcd_aliases(name, node)))
               for name, node in css.items() if not name.startswith("--")),
              BCD, common="color|display|margin|padding|width|height|font-size|background|opacity|border",
              root="scroll-margin-inline")
@@ -187,7 +191,7 @@ def web(bank):
     for name, node in selectors.items():
         link = reference(node, MDN + "CSS/Reference/Selectors")
         if isinstance(link, str) and link.rsplit("/", 1)[-1].startswith(":") and not link.rsplit("/", 1)[-1].startswith("::"):
-            pseudo.append(Answer(name, link, [":" + name, ":" + name + "()"]))
+            pseudo.append(Answer(name, link, [":" + name, ":" + name + "()", *bcd_aliases(name, node)]))
     bank.add("css-pseudo-classes", "CSS", "Name a CSS pseudo-class.",
              "Use the name, with or without the leading colon. Current pseudo-classes in MDN.",
              pseudo, BCD, common="hover|active|focus|checked|disabled|first-child|last-child|not", root="placeholder-shown")
@@ -212,7 +216,7 @@ def web(bank):
             if any("sec-" in entry for entry in refs) and name not in {
                 "length", "name", "prototype", "constructor", "size", "buffer", "byteOffset", "byteLength",
             } and not name.isupper():
-                methods.append(Answer(name, link, [f"{owner}.{name}", f"{name}()"]))
+                methods.append(Answer(name, link, list(js_member_aliases(owner, name, node))))
     bank.add("js-members", "JavaScript", "Name a method or property on a built-in JavaScript object.",
              "Use an MDN-listed member name. Shared names count once. Generic properties such as length, name, and size are excluded.",
              methods, BCD, common="map|filter|reduce|push|pop|split|join|slice|parse|stringify|keys|random", root="flatMap")
@@ -340,8 +344,10 @@ def everyday_tools(bank):
              "Use a command name from the Linux or common tldr pages. Leave out flags, arguments, and all-number names.",
              names.values(), "MIT (tldr-pages); command names",
              common="ls|cd|mkdir|pwd|cat|echo|rm|cp|mv|grep|find|touch|chmod|curl|git", root="xargs")
+    command_aliases = powershell_aliases(bank.text("powershell-aliases"))
     windows = [
-        Answer(match[1], "https://github.com/tldr-pages/tldr/blob/" + tldr["sha"] + "/" + item["path"])
+        Answer(match[1], "https://github.com/tldr-pages/tldr/blob/" + tldr["sha"] + "/" + item["path"],
+               command_aliases.get(match[1].casefold(), []))
         for item in tldr["tree"] if (match := re.fullmatch(r"pages/windows/([a-zA-Z0-9_.+-]+)\.md", item["path"]))
     ]
     bank.add("windows-commands", "Command line", "Name a Windows terminal command.",
@@ -424,7 +430,9 @@ def internet(bank):
                root="If-None-Match")
     bank.add("uri-schemes", "Networking", "Name a URL scheme.",
              "Give the part before the first colon. Permanent and provisional schemes registered with IANA count.",
-             (Answer(row["URI Scheme"], iana + "uri-schemes", [row["URI Scheme"] + ":", row["URI Scheme"] + "://"])
+             (Answer(row["URI Scheme"], iana + "uri-schemes",
+                     [row["URI Scheme"] + ":", row["URI Scheme"] + "://",
+                      *registered_expansion(row["URI Scheme"], row["Description"])])
               for row in bank.csv("uri-schemes") if row["Status"] in {"Permanent", "Provisional"} and row["URI Scheme"]),
              IANA, common="http|https|file|ftp|mailto|data|ws|wss|tel", root="magnet")
     ports = [row for row in bank.csv("ports") if row["Service Name"] and row["Port Number"].isdigit()]
@@ -432,14 +440,18 @@ def internet(bank):
                "http": ["HTTP/1.1"], "secure-mqtt": ["MQTT over TLS"]}
     bank.add("network-services", "Networking", "Name a network service or protocol that uses an assigned port.",
              "Use a service name in IANA’s TCP or UDP port registry. Established abbreviations such as DNS also count.",
-             (Answer(row["Service Name"], iana + "service-names-port-numbers", aliases.get(row["Service Name"], []))
+             (Answer(row["Service Name"], iana + "service-names-port-numbers",
+                     [*aliases.get(row["Service Name"], []),
+                      *registered_expansion(row["Service Name"], row["Description"])])
               for row in ports if row["Transport Protocol"] in {"tcp", "udp"}),
              IANA, common="http|https|ssh|ftp|domain|smtp|telnet|imap|pop3|ntp|snmp", root="gopher")
+    charsets = {row["Preferred MIME Name"] or row["Name"]: [row["Name"], *row["Aliases"].split()]
+                for row in bank.csv("charsets")}
+    codec_aliases = charset_aliases(charsets)
     bank.add("character-encodings", "Text and encoding", "Name a character encoding.",
              "Use a name or alias in IANA’s character set registry.",
-             (Answer(row["Preferred MIME Name"] or row["Name"], iana + "character-sets",
-                     [row["Name"], *row["Aliases"].split()])
-              for row in bank.csv("charsets")),
+             (Answer(name, iana + "character-sets", labels + codec_aliases.get(name, []))
+              for name, labels in charsets.items()),
              IANA, common="UTF-8|US-ASCII|ISO-8859-1|UTF-16|UTF-32|windows-1252|Shift_JIS|EUC-JP|Big5",
              root="KOI8-R")
     domains = []
@@ -447,7 +459,7 @@ def internet(bank):
         match = re.search(r'/domains/root/db/[^"\']+["\']>\s*(\.[^<\s]+)', row)
         if match and "domain-country-code." in row:
             name = html.unescape(match[1])
-            domains.append(Answer(name, "https://www.iana.org/domains/root/db", [name[1:]]))
+            domains.append(Answer(name, "https://www.iana.org/domains/root/db", list(domain_aliases(name))))
     bank.add("country-domains", "Networking", "Name a country-code top-level domain.",
              "Use a country or territory suffix listed by IANA. The leading dot is optional.",
              domains, IANA, common=".in|.uk|.us|.ca|.de|.au|.jp|.fr|.cn|.io", root=".tv")
@@ -487,6 +499,7 @@ def files(bank):
 
 def algorithms(bank):
     base = "https://xlinux.nist.gov/dads/"
+    term_aliases = nist_aliases(bank.text("nist-terms"))
     for slug, page, index, category, prompt, common, root in [
         ("data-structures", "nist-types", "S", "Data structures", "Name a data structure.",
          "array|stack|queue|linked list|hash table|binary tree|binary search tree|heap|trie", "skip list"),
@@ -507,7 +520,7 @@ def algorithms(bank):
             if page == "nist-areas" and kind != "A":
                 continue
             name = html.unescape(re.sub("<[^>]+>", "", label))
-            aliases = [name.replace("-", " "), name.replace(" ", "")]
+            aliases = [name.replace("-", " "), name.replace(" ", ""), *term_aliases.get(url, [])]
             known = {"hash table": ["hashmap", "hash map"], "binary search tree": ["BST"],
                      "quicksort": ["quick sort"], "heapsort": ["heap sort"],
                      "breadth-first search": ["BFS"], "depth-first search": ["DFS"]}
