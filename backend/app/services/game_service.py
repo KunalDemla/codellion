@@ -168,11 +168,6 @@ def current_app_config():
     return current_app.config
 
 def _correction_suggestion(question_id, normalized, allow_fuzzy, case_sensitive):
-    exact_alias = (AcceptedAnswer.query.join(AnswerAlias).filter(
-        AcceptedAnswer.question_id == question_id,
-        AcceptedAnswer.is_active.is_(True), AnswerAlias.normalized == normalized).first())
-    if exact_alias is not None:
-        return exact_alias
     # Conservative typo suggestions only. Ambiguous or weak matches stay retryable.
     if not allow_fuzzy or len(normalized) < 4:
         return None
@@ -237,15 +232,18 @@ def submit_answer(data):
     normalized = normalize_answer(raw, game_question.question.case_sensitive)
     if not normalized:
         return {"accepted": False}
-    answer = AcceptedAnswer.query.filter_by(question_id=game_question.question_id, normalized=normalized, is_active=True).first()
-    alias = _correction_suggestion(game_question.question_id, normalized, game_question.question.allow_fuzzy, game_question.question.case_sensitive) if answer is None else None
-    exact_alias = (AnswerAlias.query.join(AcceptedAnswer).filter(
-        AcceptedAnswer.question_id == game_question.question_id,
-        AcceptedAnswer.is_active.is_(True), AnswerAlias.normalized == normalized).first()) if answer is None else None
-    match = answer or (exact_alias.answer if exact_alias is not None and preview else None)
+    active = AcceptedAnswer.query.filter_by(question_id=game_question.question_id, is_active=True)
+    match = active.filter_by(normalized=normalized).first()
     if match is None:
-        if alias is not None and not preview:
-            return {"accepted": False, "correction": alias.canonical}
+        match = active.join(AnswerAlias).filter(AnswerAlias.normalized == normalized).first()
+    if match is None:
+        if not preview:
+            suggestion = _correction_suggestion(
+                game_question.question_id, normalized,
+                game_question.question.allow_fuzzy, game_question.question.case_sensitive,
+            )
+            if suggestion is not None:
+                return {"accepted": False, "correction": suggestion.canonical}
         # Wrong and empty guesses are deliberately not persisted or consuming.
         return {"accepted": False}
     if match.points != current_app.config["RARITY_TIER_POINTS"].get(match.rarity_tier):

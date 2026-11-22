@@ -41,18 +41,13 @@ def test_wrong_answers_do_not_consume_prompt(client):
     assert status["acceptedCount"] == 0
     assert status["score"] == 0
 
-def test_alias_returns_correction_then_confirmation_accepts(client):
+def test_exact_alias_is_accepted_immediately(client):
     game = start(client)
     q = next(q for q in game["questions"] if q["prompt"] == "Name a cryptographic hash function.")
     body = {"date": game["date"], "promptId": q["promptId"], "answer": "SHA256", "previewCorrection": False, "playerId": PLAYER_A, "runId": game["runId"]}
-    preview = client.post("/api/submit", json=body)
-    assert preview.status_code == 200
-    assert preview.get_json() == {"accepted": False, "correction": "SHA-256"}
-    assert client.get(f"/api/games/{game['runId']}").get_json()["acceptedCount"] == 0
-    body["previewCorrection"] = True
-    confirmed = client.post("/api/submit", json=body)
-    data = confirmed.get_json()
-    assert confirmed.status_code == 200
+    response = client.post("/api/submit", json=body)
+    data = response.get_json()
+    assert response.status_code == 200
     assert data["accepted"] is True
     assert data["answer"] == "SHA-256"
     assert data["tier"] == "Public"

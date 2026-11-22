@@ -46,6 +46,35 @@ def validate_seed(items, *, curated=False):
                 seen.add(normalized)
 
 
+def _sync_aliases(answer, aliases, case_sensitive):
+    existing = {alias.normalized: alias for alias in answer.aliases}
+    desired = {normalize_answer(text, case_sensitive): text for text in aliases}
+    if desired == {key: alias.alias for key, alias in existing.items()}:
+        return
+    updated = []
+    for key, text in desired.items():
+        alias = existing.get(key) or AnswerAlias(normalized=key)
+        alias.alias = text
+        updated.append(alias)
+    answer.aliases[:] = updated
+
+
+def _sync_live_aliases(question, item):
+    if (question.prompt != item["prompt"]
+            or question.scope != item.get("scope")
+            or question.case_sensitive != item.get("case_sensitive", False)):
+        return
+    answers = {answer.canonical: answer for answer in question.answers if answer.is_active}
+    entries = {entry["canonical"]: entry for entry in item["answers"]}
+    if answers.keys() != entries.keys() or any(
+        (answer.rarity_tier, answer.points) != (entries[name]["rarity_tier"], entries[name]["points"])
+        for name, answer in answers.items()
+    ):
+        return
+    for name, answer in answers.items():
+        _sync_aliases(answer, entries[name].get("aliases", []), question.case_sensitive)
+
+
 def seed_questions(bank="curated"):
     items = json.loads((SEED_DIR / BANK_FILES[bank]).read_text(encoding="utf-8"))
     validate_seed(items, curated=bank == "curated")
@@ -63,6 +92,7 @@ def seed_questions(bank="curated"):
     for item in items:
         question = existing.get(item["slug"])
         if question and question.id in live_ids:
+            _sync_live_aliases(question, item)
             continue
         cdata = item["category"]
         category = categories.get(cdata["slug"])
@@ -96,14 +126,7 @@ def seed_questions(bank="curated"):
             answer.explanation = entry.get("explanation")
             answer.source_url = entry.get("source_url")
             answer.license_name = entry.get("license_name")
-            existing_aliases = {alias.normalized: alias for alias in answer.aliases}
-            desired_aliases = []
-            for text in entry.get("aliases", []):
-                key = normalize_answer(text, question.case_sensitive)
-                alias = existing_aliases.get(key) or AnswerAlias(normalized=key)
-                alias.alias = text
-                desired_aliases.append(alias)
-            answer.aliases[:] = desired_aliases
+            _sync_aliases(answer, entry.get("aliases", []), question.case_sensitive)
         for stale in unmatched.values():
             if stale.id in used_answers:
                 stale.is_active = False

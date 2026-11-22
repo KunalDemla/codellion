@@ -13,6 +13,7 @@ import subprocess
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
+from io import StringIO
 from pathlib import Path
 
 import yaml
@@ -20,6 +21,7 @@ import yaml
 SEED = Path(__file__).resolve().parent
 sys.path.insert(0, str(SEED.parent))
 from app.services.answer_validator import normalize_answer
+from answer_aliases import additional_aliases
 from named_prompts import extra_catalogs
 
 POINTS = (10, 15, 30, 60, 85, 100)
@@ -50,7 +52,7 @@ class Bank:
         return json.loads(self.text(key))
 
     def csv(self, key):
-        return csv.DictReader(self.text(key).splitlines())
+        return csv.DictReader(StringIO(self.text(key)))
 
     def add(self, slug, category, prompt, scope, rows, license_name, *, common, root=None, sensitive=False):
         if slug in self.slugs:
@@ -88,9 +90,13 @@ class Bank:
         trick, user_space, privileged = (max(2, later * share // 10) for share in (2, 2, 3))
         kernel = later - trick - user_space - privileged
         tiers = [1] * public + [2] * trick + [3] * user_space + [4] * privileged + [5] * kernel + [6]
-        alias_counts = Counter()
+        source_alias_counts = Counter()
         for name, row in by_name.items():
-            alias_counts.update({normalize(alias) for alias in row.aliases} - {name, ""})
+            source_alias_counts.update({normalize(alias) for alias in row.aliases} - {name, ""})
+        additions = additional_aliases(slug, by_name.values(), normalize)
+        alias_counts = Counter()
+        for candidates in additions.values():
+            alias_counts.update({normalize(alias) for alias in candidates} - {""})
 
         answers = []
         for name, tier in zip(ordered + [featured], tiers, strict=True):
@@ -98,7 +104,12 @@ class Bank:
             aliases = {}
             for alias in row.aliases:
                 token = normalize(alias)
-                if token and token not in by_name and alias_counts[token] == 1:
+                if token and not token.isdigit() and token not in by_name and source_alias_counts[token] == 1:
+                    aliases.setdefault(token, alias)
+            for alias in additions.get(name, []):
+                token = normalize(alias)
+                if (token and not token.isdigit() and token not in by_name
+                        and token not in source_alias_counts and alias_counts[token] == 1):
                     aliases.setdefault(token, alias)
             answers.append({
                 "canonical": row.name, "aliases": sorted(aliases.values(), key=str.casefold),

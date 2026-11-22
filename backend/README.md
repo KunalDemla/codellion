@@ -6,7 +6,7 @@ Flask + SQLAlchemy + PostgreSQL backend. The daily challenge changes at **00:00 
 
 - Seven prompts per daily challenge; the maximum score is 700.
 - Tiers and points are `Public` 10, `Known Trick` 15, `User Space` 30, `Privileged` 60, `Kernel` 85, and `Root Key` 100.
-- A canonical correct answer is accepted immediately. An exact alias or a confident typo match returns `accepted: false` with a suggested `correction`; the client asks the player to confirm. Confirm an exact alias by resending it with `previewCorrection: true`, or submit the displayed canonical correction. Only accepted answers are recorded and consume that prompt.
+- Exact canonical answers and aliases are accepted immediately and earn the same score. A confident typo match can return `accepted: false` with a suggested `correction` when fuzzy matching is enabled for that question. Submit the suggested answer to confirm it. Only accepted answers are recorded and consume that prompt.
 - Incorrect, empty, ambiguous, or unconfirmed guesses are not recorded. A player may retry until the client timer ends. The backend closes submissions when the UTC daily challenge rolls over.
 - One run per `playerId` per UTC date. `playerId` and `runId` are UUIDs; account authentication is not implemented yet.
 - Scores are computed by the server. Accepted answers return a signed HMAC-SHA256 receipt. Receipts are persisted so repeating an accepted submission returns the original result.
@@ -96,7 +96,7 @@ Submit or preview an answer:
 {"date":"2026-11-22","promptId":"p3","answer":"SHA256","previewCorrection":false,"playerId":"54170d9f-fb20-499a-ac66-faa75de4d844","runId":"f03a8a3d-98ed-4eec-b307-dad37b9e93ee"}
 ```
 
-Incorrect answer: `{"accepted":false}`. Alias or confident typo: `{"accepted":false,"correction":"SHA-256"}`. The correction is only a suggestion; it is not recorded until confirmed. Accepted answer: `{"accepted":true,"answer":"SHA-256","tier":"Public","score":10,"totalScore":10,"quip":"A signal is born.","receipt":"<signed-token>"}`.
+An incorrect answer returns `{"accepted":false}`. When fuzzy matching is enabled, a confident typo can return `{"accepted":false,"correction":"SHA-256"}`. An exact match such as `SHA256` returns the canonical answer and its score, for example `{"accepted":true,"answer":"SHA-256","tier":"Public","score":10,"totalScore":10,"quip":"A signal is born.","receipt":"<signed-token>"}`.
 
 The compatible `POST /api/games/{runId}/answers` route is also available.
 
