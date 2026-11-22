@@ -21,7 +21,7 @@ import yaml
 SEED = Path(__file__).resolve().parent
 sys.path.insert(0, str(SEED.parent))
 from app.services.answer_validator import normalize_answer
-from answer_aliases import additional_aliases
+from answer_aliases import EXCLUDED_ALIASES, additional_aliases
 from named_prompts import extra_catalogs
 
 POINTS = (10, 15, 30, 60, 85, 100)
@@ -94,6 +94,7 @@ class Bank:
         for name, row in by_name.items():
             source_alias_counts.update({normalize(alias) for alias in row.aliases} - {name, ""})
         additions = additional_aliases(slug, by_name.values(), normalize)
+        excluded = {normalize(alias) for alias in EXCLUDED_ALIASES.get(slug, ())}
         alias_counts = Counter()
         for candidates in additions.values():
             alias_counts.update({normalize(alias) for alias in candidates} - {""})
@@ -104,11 +105,12 @@ class Bank:
             aliases = {}
             for alias in row.aliases:
                 token = normalize(alias)
-                if token and not token.isdigit() and token not in by_name and source_alias_counts[token] == 1:
+                if (token and not token.isdigit() and token not in excluded
+                        and token not in by_name and source_alias_counts[token] == 1):
                     aliases.setdefault(token, alias)
             for alias in additions.get(name, []):
                 token = normalize(alias)
-                if (token and not token.isdigit() and token not in by_name
+                if (token and not token.isdigit() and token not in by_name and token not in excluded
                         and token not in source_alias_counts and alias_counts[token] == 1):
                     aliases.setdefault(token, alias)
             answers.append({

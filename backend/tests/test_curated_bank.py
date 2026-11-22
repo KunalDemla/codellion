@@ -145,3 +145,35 @@ def test_curated_aliases_reseed_and_score_in_an_existing_run(client, tmp_path, m
         assert client.post("/api/submit", json=guess).get_json() == {"accepted": False}
         result = client.post("/api/submit", json={**guess, "answer": alias}).get_json()
         assert (result["accepted"], result["answer"], result["score"]) == (True, canonical, expected["points"])
+
+
+def test_reviewed_aliases_preserve_distinctions_between_answers():
+    reviewed = {
+        "ci-tools": {"Jenkins CI": "Jenkins", "Jenkins X": "JenkinsX", "Screwdriver.cd": "Screwdriver"},
+        "cms": {"CMSMS": "CMS Made Simple", "Omeka Classic": "Omeka"},
+        "python-exceptions": {"TypeError()": "TypeError", "except SyntaxError:": "SyntaxError",
+                              "I/O Error": "IOError", "WindowsError": "OSError"},
+        "cpu-architectures": {"wasm32": "wasm", "GOARCH=386": "x86",
+                              "MIPS32": "mips", "MIPS32LE": "mipsle"},
+        "data-formats": {"Swagger 2.0": "OpenAPI Specification v2", "Swagger 2.0 YAML": "OASv2-yaml",
+                         "robots.txt": "Robots Exclusion Rules", "BDF": "Glyph Bitmap Distribution Format"},
+        "software-licenses": {"Expat License": "MIT", "GPL-3.0": "GPL-3.0-only",
+                              "GPLv3+": "GPL-3.0-or-later", "3-clause BSD": "BSD-3-Clause"},
+        "tree-structures": {"prefix tree": "trie", "Patricia trie": "Patricia tree", "balanced BST": "balanced binary search tree",
+                            "BST": "binary search tree", "B+tree": "B+-tree", "B tree": "B-tree"},
+    }
+    invalid = {
+        "cpu-architectures": {"386", "wasm64"},
+        "data-formats": {"OpenAPI", "hash", "sum", "traveling salesman problem", "robotx.txt"},
+        "software-licenses": {"GPL", "BSD", "X11"},
+    }
+    bank = {item["slug"].removeprefix("curated-basics-"): item for item in load_bank()}
+    for slug, cases in reviewed.items():
+        item = bank[slug]
+        labels = {
+            normalize_answer(text, item["case_sensitive"]): answer["canonical"]
+            for answer in item["answers"] for text in (answer["canonical"], *answer["aliases"])
+        }
+        for alias, canonical in cases.items():
+            assert labels[normalize_answer(alias, item["case_sensitive"])] == canonical
+        assert invalid.get(slug, set()).isdisjoint(labels)
