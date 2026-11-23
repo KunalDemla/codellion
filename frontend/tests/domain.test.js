@@ -85,3 +85,21 @@ test('repicking a daily clears only the browser run for that lineup', async () =
   assert.equal((await api.daily()).run, null);
   assert.deepEqual(JSON.parse(entries.get(key)), { playerId, runs: { [yesterday]: previous } });
 });
+
+test('answer review uses the default route and forwards the player and filters', async () => {
+  const playerId = newQuizId();
+  const runId = newQuizId();
+  const api = createQuizApi({
+    baseUrl: '/api', timeoutMs: 5000,
+    storage: { getItem: () => JSON.stringify({ playerId, runs: {} }), removeItem() {} },
+    fetcher: async (url, options) => {
+      const { pathname, searchParams } = new URL(url, 'https://quiz.example');
+      assert.equal(pathname, `/api/games/${runId}/results/rounds/3/answers`);
+      assert.deepEqual(Object.fromEntries(searchParams), { playerId, q: 'C++', tier: 'common', cursor: '50' });
+      assert.equal(options.method, undefined);
+      return Response.json({ items: [], nextCursor: null });
+    },
+  });
+  assert.equal(api.canReview, true);
+  assert.deepEqual(await api.answers(runId, 3, { q: 'C++', tier: 'common', cursor: '50' }), { items: [], nextCursor: null });
+});

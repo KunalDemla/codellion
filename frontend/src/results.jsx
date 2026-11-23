@@ -1,71 +1,86 @@
-import React, { useEffect, useState } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { ArrowRight, BarChart3, Check, ChevronDown, Clipboard, Search, Terminal, Trophy } from 'lucide-react';
 import { countdown, TIERS } from './domain.js';
 import { CLEARANCE_LABELS } from './clearance.js';
 import { api } from './use-daily.js';
 
-function AnswerBrowser({ runId, round }) {
+const tiersByRarity = Object.entries(TIERS).reverse();
+
+const AnswerBrowser = memo(function AnswerBrowser({ runId, round }) {
   const [q, setQuery] = useState('');
   const [tier, setTier] = useState('');
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [cursor, setCursor] = useState(null);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError('');
-    setPage(null);
+    if (!cursor) setPage(null);
     const request = setTimeout(() => {
-      api.answers(runId, round, { q, tier }).then(
-        reply => { if (active) setPage(reply); },
+      api.answers(runId, round, { q, tier, cursor }).then(
+        reply => {
+          if (!active) return;
+          setPage(previous => cursor && previous?.nextCursor === cursor
+            ? { ...reply, items: [...previous.items, ...reply.items] }
+            : reply);
+        },
         cause => { if (active) setError(cause.message); },
       ).finally(() => { if (active) setLoading(false); });
-    }, q ? 100 : 0);
+    }, q && !cursor ? 100 : 0);
     return () => { active = false; clearTimeout(request); };
-  }, [runId, round, q, tier, retry]);
+  }, [runId, round, q, tier, retry, cursor]);
 
-  async function more() {
-    setLoading(true);
-    setError('');
-    try {
-      const original = page;
-      const next = await api.answers(runId, round, { q, tier, cursor: original.nextCursor });
-      setPage(previous => previous === original ? { ...next, items: [...previous.items, ...next.items] } : previous);
-    } catch (cause) {
-      setError(cause.message);
-    } finally {
-      setLoading(false);
-    }
+  function selectTier(value) {
+    if (tier === value) return;
+    setCursor(null);
+    setTier(value);
   }
 
   return (
     <div className="answer-browser">
       <div className="search-box"><Search size={17} />
-        <input type="search" maxLength={128} aria-label="Search answers" placeholder="Search accepted answers" value={q} onChange={e => setQuery(e.target.value)} />
+        <input type="search" maxLength={128} aria-label="Search answers and aliases" placeholder="Search answers and aliases"
+          value={q} onChange={e => { setCursor(null); setQuery(e.target.value); }} />
       </div>
-      <div className="filter-pills" aria-label="Filter by tier">
-        <button aria-pressed={tier === ''} onClick={() => setTier('')}>All{page && <small>{page.total}</small>}</button>
-        {Object.entries(TIERS).reverse().map(([key, value]) => (
-          <button key={key} aria-pressed={tier === key} style={{ '--tier': value.tone }} onClick={() => setTier(key)}>{value.label}{page && <small>{page.tierCounts[key]}</small>}</button>
+      <div className="filter-pills" role="group" aria-label="Filter by tier">
+        <button aria-pressed={tier === ''} onClick={() => selectTier('')}>All{page && <small>{page.total}</small>}</button>
+        {tiersByRarity.map(([key, value]) => (
+          <button key={key} aria-pressed={tier === key} style={{ '--tier': value.tone }} onClick={() => selectTier(key)}>{value.label}{page && <small>{page.tierCounts[key]}</small>}</button>
         ))}
       </div>
-      {page && <ul className="accepted-list">
-        {page.items.map(answer => <li key={answer.id} style={{ '--tier': TIERS[answer.tier].tone }}>
-          <span className="tier-dot" />
-          <div><strong>{answer.label}</strong>{answer.isYourAnswer && <span className="your-answer">Your answer</span>}
-            {answer.note && <p>{answer.note}</p>}</div>
-          <span className="accepted-points">+{answer.points}</span>
-        </li>)}
-      </ul>}
+      {page?.items.length > 0 && <>
+        <p className="browser-status" role="status">Showing {page.items.length} of {page.matched} accepted answers</p>
+        <div className="accepted-groups" role="region" aria-label="Accepted answers" tabIndex={0}>
+          {tiersByRarity.map(([key, value]) => {
+            const items = page.items.filter(answer => answer.tier === key);
+            if (!items.length) return null;
+            return <section key={key} className="accepted-group" style={{ '--tier': value.tone }}>
+              <h3>{value.label}<span>+{value.points} points</span></h3>
+              <ul className="accepted-list">
+                {items.map(answer => <li key={answer.id}>
+                  <strong>{answer.label}</strong>{answer.isYourAnswer && <span className="your-answer">Your answer</span>}
+                  {answer.note && <p>{answer.note}</p>}
+                  {answer.aliases?.length > 0 && <details className="accepted-aliases">
+                    <summary>{answer.aliases.length === 1 ? '1 alias' : answer.aliases.length + ' aliases'}</summary>
+                    <ul aria-label="Accepted aliases">{answer.aliases.map(alias => <li key={alias}>{alias}</li>)}</ul>
+                  </details>}
+                </li>)}
+              </ul>
+            </section>;
+          })}
+        </div>
+      </>}
       {!loading && page?.matched === 0 && <p className="browser-status" role="status">No accepted answers match this search.</p>}
       {error && <p className="browser-status" role="alert">{error} <button className="quiet-button" onClick={() => setRetry(value => value + 1)}>Retry</button></p>}
       {loading && <p className="browser-status" role="status">Loading answers…</p>}
-      {page?.nextCursor && <button className="quiet-button" onClick={more} disabled={loading}>Load more answers <ChevronDown size={15} /></button>}
+      {page?.nextCursor && <button className="quiet-button" onClick={() => setCursor(page.nextCursor)} disabled={loading}>Load more answers <ChevronDown size={15} /></button>}
     </div>
   );
-}
+});
 
 function ScoreChart({ results, maxScore }) {
   return (
@@ -111,7 +126,7 @@ export default function Results({ run, now, preferences, loadDaily }) {
   const [results, setResults] = useState(null);
   const [error, setError] = useState('');
   const [request, setRequest] = useState(0);
-  const [expanded, setExpanded] = useState(null);
+  const [expanded, setExpanded] = useState(run.rounds[0]?.number ?? null);
   const [copied, setCopied] = useState(false);
   const [shareText, setShareText] = useState('');
 
@@ -176,12 +191,13 @@ export default function Results({ run, now, preferences, loadDaily }) {
       </div>
       <section className="panel result-panel review" aria-labelledby="review-heading">
         <h2 id="review-heading"><Search size={20} /> Answer review</h2>
+        {api.canReview && <p className="review-intro">Open a round to see every accepted answer and its aliases.</p>}
         {results.rounds.map(round => {
           const match = round.match;
           const open = expanded === round.number;
           const row = <>
             <span className="review-number">{String(round.number).padStart(2, '0')}</span>
-            <span className="review-question"><strong>{round.prompt.text}</strong><small>{match?.label ?? round.submittedText ?? 'No answer'}</small></span>
+            <span className="review-question"><strong>{round.prompt.text}</strong><small>{match?.label ?? (round.submittedText || 'No answer')}</small></span>
             <span className="review-points">+{round.points}</span>
           </>;
           const style = { '--tier': match ? TIERS[match.tier].tone : '#a7b2a9' };

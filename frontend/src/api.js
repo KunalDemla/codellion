@@ -33,7 +33,7 @@ function stats(history, dayNumber) {
 }
 
 export function createQuizApi({
-  baseUrl, timeoutMs, answerReviewPath, storage = localStorage,
+  baseUrl, timeoutMs, answerReviewPath = '/games/{runId}/results/rounds/{roundNumber}/answers', storage = localStorage,
   clock = Date.now, fetcher = fetch,
 }) {
   const base = baseUrl.trim().replace(/\/+$/, '');
@@ -271,11 +271,11 @@ export function createQuizApi({
         nextDailyOpensAt: now() < Date.parse(run.resetsAt) ? run.resetsAt : iso(Date.parse(run.resetsAt) + UTC_DAY_MS),
       };
     },
-    answers(id, number, params) {
-      const query = new URLSearchParams();
-      for (const [key, value] of Object.entries(params)) if (value) query.set(key, value);
+    answers(id, number, { q, tier, cursor } = {}) {
+      const query = new URLSearchParams({ playerId: player() });
+      for (const [key, value] of Object.entries({ q, tier, cursor })) if (value) query.set(key, value);
       const path = answerReviewPath.replace('{runId}', encodeURIComponent(id)).replace('{roundNumber}', String(number));
-      return request(path + (query.size ? '?' + query : ''));
+      return request(path + '?' + query);
     },
   };
 }

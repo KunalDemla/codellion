@@ -5,7 +5,7 @@ const timeout = Number(import.meta.env.VITE_API_REQUEST_TIMEOUT_MS);
 export const api = createQuizApi({
   baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
   timeoutMs: Number.isSafeInteger(timeout) && timeout > 0 && timeout <= 120_000 ? timeout : 8000,
-  answerReviewPath: import.meta.env.VITE_ANSWER_REVIEW_PATH,
+  answerReviewPath: import.meta.env.VITE_ANSWER_REVIEW_PATH || undefined,
 });
 const conflict = new Set(['ROUND_NOT_ACTIVE', 'ROUND_NOT_RESOLVED', 'DAILY_CLOSED', 'STALE_DRAFT']);
 const inputKey = run => run?.currentRound ? run.id + '/' + run.currentRound.number : null;

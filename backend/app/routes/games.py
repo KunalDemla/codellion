@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request, current_app
+from app.services.answer_review import review_answers
 from app.services.game_service import (GameError, create_game, get_game,
     game_payload, submit_answer, complete_game, today_payload,
     get_or_create_daily_challenge, challenge_payload, _parse_date)
@@ -43,6 +44,17 @@ def start_game():
 def game_status(run_id):
     try:
         return jsonify(game_payload(get_game(run_id)))
+    except GameError as error:
+        return error_response(error)
+
+@bp.get("/games/<run_id>/results/rounds/<int:round_number>/answers")
+def round_answers(run_id, round_number):
+    try:
+        catalog = review_answers(
+            run_id, request.args.get("playerId"), round_number,
+            q=request.args.get("q", ""), tier=request.args.get("tier", ""), cursor=request.args.get("cursor", ""),
+        )
+        return jsonify(catalog), 200, {"Cache-Control": "private, no-store"}
     except GameError as error:
         return error_response(error)
 

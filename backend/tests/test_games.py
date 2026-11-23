@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
-from app.models import Game
+from app.extensions import db
+from app.models import AcceptedAnswer, Game
 
 PLAYER_A = str(uuid.uuid4())
 PLAYER_B = str(uuid.uuid4())
@@ -121,6 +122,73 @@ def test_completion_verifies_receipts_and_uses_server_score(client):
     leaderboard = client.get(f"/api/daily-leaderboard?date={game['date']}").get_json()
     assert leaderboard["entries"][0]["score"] == 10
     assert client.post("/api/today/complete", json=completion).get_json() == summary
+
+
+def test_answer_review_requires_a_completed_run_and_matching_player(client):
+    game = start(client)
+    path = f"/api/games/{game['runId']}/results/rounds/1/answers"
+    assert client.get(path).status_code == 400
+    assert client.get(path, query_string={"playerId": PLAYER_B}).status_code == 403
+    assert client.get(path, query_string={"playerId": PLAYER_A}).status_code == 409
+
+    body = {"date": game["date"], "playerId": PLAYER_A, "runId": game["runId"],
+            "receipts": [None] * 7, "record": True}
+    assert client.post("/api/today/complete", json=body).status_code == 200
+    assert client.get(path, query_string={"playerId": PLAYER_B}).status_code == 403
+    response = client.get(path, query_string={"playerId": PLAYER_A})
+    assert response.status_code == 200
+    assert "no-store" in response.headers["Cache-Control"]
+    assert response.get_json()["total"] > 0
+    assert client.get(path.replace("/1/", "/8/"), query_string={"playerId": PLAYER_A}).status_code == 404
+
+
+def test_answer_review_lists_all_tiers_and_pages_and_searches_aliases(client):
+    game = start(client)
+    prompt = next(q for q in game["questions"] if q["prompt"] == "Name a cryptographic hash function.")
+    answer_slot = int(prompt["promptId"][1:])
+    ids = {"date": game["date"], "playerId": PLAYER_A, "runId": game["runId"]}
+    correct = client.post("/api/submit", json={**ids, "promptId": prompt["promptId"], "answer": "sha256"}).get_json()
+    receipts = [None] * 7
+    receipts[answer_slot - 1] = correct["receipt"]
+    assert client.post("/api/today/complete", json={**ids, "receipts": receipts, "record": True}).status_code == 200
+
+    question = Game.query.filter_by(run_id=game["runId"]).one().questions[answer_slot - 1].question
+    extras = [
+        AcceptedAnswer(question=question, canonical=f"Example {i:03d}", normalized=f"example {i:03d}", rarity_tier=1, points=10)
+        for i in range(52)
+    ]
+    db.session.add_all(extras + [
+        AcceptedAnswer(question=question, canonical="Inactive", normalized="inactive", rarity_tier=1, points=10, is_active=False)
+    ])
+    db.session.commit()
+    path = f"/api/games/{game['runId']}/results/rounds/{answer_slot}/answers"
+
+    def browse(**kwargs):
+        response = client.get(path, query_string={"playerId": PLAYER_A, **kwargs})
+        assert response.status_code == 200, response.get_json()
+        return response.get_json()
+
+    first = browse()
+    assert first["items"][0]["tier"] == "featured"
+    assert first["total"] == sum(first["tierCounts"].values())
+    assert set(first["tierCounts"]) == {"common", "too_clever", "familiar", "rare", "deep_cut", "featured"}
+    assert len(first["items"]) == 50
+    second = browse(cursor=first["nextCursor"])
+    assert second["nextCursor"] is None
+    items = first["items"] + second["items"]
+    assert len(items) == len({a["id"] for a in items}) == first["total"]
+    assert "Inactive" not in {a["label"] for a in items}
+    assert [a["label"] for a in items if a["isYourAnswer"]] == ["SHA-256"]
+
+    alias = browse(q="SHA256")
+    assert alias["matched"] == 1
+    assert alias["items"][0]["label"] == "SHA-256"
+    assert alias["items"][0]["aliases"] == ["SHA256"]
+    assert browse(q="sha256", tier="featured")["matched"] == 0
+    assert browse(q="%")["items"] == []
+    assert browse(tier="featured")["matched"] == 1
+    for invalid in ({"cursor": "-1"}, {"tier": "unknown"}, {"q": "x" * 129}):
+        assert client.get(path, query_string={"playerId": PLAYER_A, **invalid}).status_code == 400
 
 def test_six_tiers_can_reach_700_points(client, app):
     expected = [

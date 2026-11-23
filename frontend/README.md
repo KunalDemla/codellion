@@ -26,13 +26,10 @@ origin specified in `.env.example`.
   `FRONTEND_ORIGIN` configuration.
 - `VITE_API_REQUEST_TIMEOUT_MS` optionally changes the timeout for each HTTP
   request. The default is 8000 ms.
-- `VITE_ANSWER_REVIEW_PATH` optionally enables the answer catalog. For an API
-  that serves a post-completion answer catalog, use a relative template such as
-  `/runs/{runId}/results/rounds/{roundNumber}/answers`. The endpoint accepts
-  `q`, `tier`, and `cursor` and returns `items`, `tierCounts`, `total`,
-  `matched`, and `nextCursor`. Each item has `id`, `label`, `tier`,
-  `points`, optional `note`, and `isYourAnswer`. With the current Flask API,
-  leave it blank to show the player’s own answer history.
+- `VITE_ANSWER_REVIEW_PATH` overrides the completed-run answer catalog path.
+  The default is `/games/{runId}/results/rounds/{roundNumber}/answers`, relative
+  to the API base. The browser supplies the run's `playerId`, search, tier, and
+  page cursor as query parameters.
 
 The UI uses `GET /today` for prompts, rule settings, and the server clock,
 `POST /games` to start, `POST /submit` for checks and corrections, and

@@ -110,6 +110,20 @@ Completes and records the run after the client finishes its seven rounds:
 
 `receipts` has seven slots in p1-to-p7 order. A slot is the accepted answer's receipt or `null` when that prompt received no correct answer. The server verifies receipts, ignores the submitted `score`, and calculates the stored score from accepted submissions. Response: `{ "sample": 1, "betterThan": 100, "dist": [{"minScore":0,"maxScore":99,"count":1}, ...] }`. The histogram spans 0–700 in 100-point bands. Completion is idempotent and returns the saved summary on retries.
 
+### `GET /api/games/{runId}/results/rounds/{roundNumber}/answers`
+
+Returns the accepted answers for the given round of a completed run. The
+required `playerId` query parameter must match that run. Optional parameters
+are `q` (case-insensitive substring of a canonical label or alias), `tier`
+(`common`, `too_clever`, `familiar`, `rare`, `deep_cut`, or `featured`), and
+`cursor` (the previous response's `nextCursor`).
+
+Each page contains up to 50 `items` sorted by descending rarity and then
+label. Each item has `id`, `label`, `tier`, `points`, `note`, `aliases`,
+and `isYourAnswer`. The response also includes the round's `total` and
+`tierCounts`, the filtered `matched` count, and `nextCursor` (or `null`).
+Answer catalogs are private and served with `Cache-Control: no-store`.
+
 ### Other routes
 
 - `GET /api/games/{runId}` — run progress and accepted prompt scores, without answer keys.
