@@ -127,7 +127,7 @@ export function createQuizApi({
     return reply;
   }
 
-  async function reconcile(run) {
+  async function reconcile(run, previewCorrections = true) {
     if (['completed', 'ready_to_surface', 'expired'].includes(run.phase)) return run;
     if (now() >= Date.parse(run.resetsAt)) {
       run.phase = 'expired';
@@ -138,9 +138,9 @@ export function createQuizApi({
     const round = run.currentRound;
     if (!round) return run;
     if (now() >= Date.parse(round.answerEndsAt)) {
-      const latest = round.draft.text.trim();
+      const latest = (round.correction?.originalText ?? round.draft.text).trim();
       const text = latest || round.pending?.text || '';
-      const reply = text ? await submit(run, text, false) : null;
+      const reply = text ? await submit(run, text, previewCorrections) : null;
       const fresh = getRun(run.id);
       if (fresh.currentRound?.number === round.number) settle(fresh, text, reply, 'deadline');
       return fresh;
@@ -173,7 +173,7 @@ export function createQuizApi({
 
   return {
     canReview: Boolean(answerReviewPath),
-    async daily() {
+    async daily(previewCorrections) {
       const data = await request('/today');
       offset = Date.parse(data.serverTime) - clock();
       daily = {
@@ -191,26 +191,26 @@ export function createQuizApi({
         write(state);
         previous = null;
       }
-      const run = previous?.started ? await reconcile(previous) : null;
+      const run = previous?.started ? await reconcile(previous, previewCorrections) : null;
       return { ...daily, ...snapshot(run) };
     },
-    async start(date) {
+    async start(date, previewCorrections) {
       if (daily?.dailyId !== date) throw problem('Reload to open the current daily.', 'DAILY_CLOSED');
       const previous = read().runs[date];
-      if (previous?.started) return snapshot(await reconcile(previous));
+      if (previous?.started) return snapshot(await reconcile(previous, previewCorrections));
       const run = previous || {
         id: newQuizId(), ...daily, version: 0, rounds: [], score: 0, completedAt: null, started: false,
       };
       if (!previous) storeRun(run);
       await request('/games', { date, playerId: player(), runId: run.id });
       const saved = read().runs[date];
-      if (saved.started) return snapshot(await reconcile(saved));
+      if (saved.started) return snapshot(await reconcile(saved, previewCorrections));
       run.started = true;
       openRound(run, 1);
       return snapshot(run);
     },
-    async run(id) {
-      return snapshot(await reconcile(getRun(id)));
+    async run(id, previewCorrections) {
+      return snapshot(await reconcile(getRun(id), previewCorrections));
     },
     async saveDraft(id, number, { text, revision }) {
       const run = getRun(id);
@@ -240,8 +240,8 @@ export function createQuizApi({
       storeRun(fresh);
       return { outcome: reply.correction ? 'correction_required' : 'rejected', ...snapshot(fresh) };
     },
-    async advance(id, number) {
-      const run = await reconcile(getRun(id));
+    async advance(id, number, previewCorrections) {
+      const run = await reconcile(getRun(id), previewCorrections);
       if (run.phase === 'completed' || run.rounds.length > number || run.currentRound?.number > number) return snapshot(run);
       if (run.phase === 'expired') throw problem('The daily run has reset.', 'DAILY_CLOSED');
       if (number !== run.rounds.length || !['round_reveal', 'ready_to_surface'].includes(run.phase)) {

@@ -65,6 +65,22 @@ def test_similar_answer_suggests_correction_without_consuming_prompt(client):
     assert response.get_json() == {"accepted": False, "correction": "SHA-256"}
     assert client.get(f"/api/games/{game['runId']}").get_json()["acceptedCount"] == 0
 
+
+def test_ambiguous_typos_stay_retryable(client):
+    game = start(client)
+    prompt = next(q for q in game["questions"] if q["prompt"] == "Name a cryptographic hash function.")
+    position = int(prompt["promptId"][1:])
+    question = Game.query.filter_by(run_id=game["runId"]).one().questions[position - 1].question
+    db.session.add(AcceptedAnswer(
+        question=question, canonical="SHA-258", normalized="sha-258", rarity_tier=2, points=15,
+    ))
+    db.session.commit()
+    body = {"date": game["date"], "promptId": prompt["promptId"], "answer": "SHA-257",
+            "playerId": PLAYER_A, "runId": game["runId"]}
+    assert client.post("/api/submit", json=body).get_json() == {"accepted": False}
+    state = client.get(f"/api/games/{game['runId']}").get_json()
+    assert state["acceptedCount"] == state["score"] == 0
+
 def test_correct_canonical_answer_is_accepted_immediately(client):
     game = start(client)
     q = next(q for q in game["questions"] if q["prompt"] == "Name a cryptographic hash function.")

@@ -22,8 +22,11 @@ export function useDaily(preferences) {
   const anchor = useRef({ time: Date.now(), local: performance.now() });
   const current = useRef(null);
   const draftRef = useRef(draft);
+  const correctionPreview = useRef(preferences.corrections);
   const locked = useRef(false);
   const lastSnapshotTime = useRef(0);
+
+  useEffect(() => { correctionPreview.current = preferences.corrections; }, [preferences.corrections]);
 
   const currentTime = useCallback(() => anchor.current.time + performance.now() - anchor.current.local, []);
   const updateDraft = useCallback(value => {
@@ -57,7 +60,7 @@ export function useDaily(preferences) {
     setBusy(true);
     setError('');
     try {
-      const payload = await api.daily();
+      const payload = await api.daily(correctionPreview.current);
       setDaily(payload);
       apply(payload, { replace: true });
     } catch (cause) {
@@ -69,7 +72,7 @@ export function useDaily(preferences) {
   }, [apply]);
 
   const refresh = useCallback(async (id, forceDraft = false) => {
-    const payload = await api.run(id);
+    const payload = await api.run(id, correctionPreview.current);
     if (current.current?.id === id) apply(payload, { forceDraft });
   }, [apply]);
 
@@ -165,7 +168,7 @@ export function useDaily(preferences) {
     const number = activeRun?.rounds.at(-1)?.number;
     if (!number) return;
     void transact(async () => {
-      const reply = await api.advance(activeRun.id, number);
+      const reply = await api.advance(activeRun.id, number, correctionPreview.current);
       apply(reply);
     });
   }
@@ -173,7 +176,7 @@ export function useDaily(preferences) {
   return {
     daily, run, now, busy, error, rejected, draft,
     edit, submit, next, load,
-    start: () => void transact(async () => apply(await api.start(daily.dailyId), { replace: true })),
+    start: () => void transact(async () => apply(await api.start(daily.dailyId, correctionPreview.current), { replace: true })),
     retry: () => {
       setError('');
       if (due) setAction(value => value + 1);

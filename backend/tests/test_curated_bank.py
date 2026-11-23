@@ -18,6 +18,7 @@ def test_curated_bank_covers_familiar_answers_and_keeps_the_tiers():
     bank = load_bank()
     seed.validate_seed(bank, curated=True)
     assert len(bank) == 100
+    assert all(item["allow_fuzzy"] for item in bank)
     by_slug = {item["slug"].removeprefix("curated-basics-"): item for item in bank}
     for item in bank:
         tiers = Counter(answer["rarity_tier"] for answer in item["answers"])
@@ -93,7 +94,7 @@ def test_reseed_keeps_todays_runs_and_refreshes_future_lineups(client, tmp_path,
     assert client.post("/api/games", json=identifiers).status_code == 201
     for prompt, wrong, correct in [(statuses, "404", "Not Found"), (keywords, "true", "True")]:
         guess = {**identifiers, "promptId": prompt["promptId"], "answer": wrong}
-        assert not client.post("/api/submit", json=guess).get_json()["accepted"]
+        assert client.post("/api/submit", json=guess).get_json() == {"accepted": False}
         result = client.post("/api/submit", json={**guess, "answer": correct}).get_json()
         assert result["accepted"]
         assert result["answer"] == correct
@@ -124,6 +125,7 @@ def test_curated_aliases_reseed_and_score_in_an_existing_run(client, tmp_path, m
     for item in sample:
         alias, canonical, _ = examples[item["slug"].removeprefix("curated-basics-")]
         question = Question.query.filter_by(slug=item["slug"]).one()
+        question.allow_fuzzy = False
         answer = AcceptedAnswer.query.filter_by(question_id=question.id, canonical=canonical).one()
         AnswerAlias.query.filter_by(
             answer_id=answer.id, normalized=normalize_answer(alias, question.case_sensitive),
@@ -134,10 +136,16 @@ def test_curated_aliases_reseed_and_score_in_an_existing_run(client, tmp_path, m
     alias = examples[first["slug"].removeprefix("curated-basics-")][0]
     guess = {**run, "promptId": prompt_ids[first["prompt"]], "answer": alias}
     assert client.post("/api/submit", json=guess).get_json() == {"accepted": False}
+    ci_guess = {**run, "promptId": prompt_ids["Name a CI or CD tool."], "answer": "Jenkis"}
+    assert client.post("/api/submit", json=ci_guess).get_json() == {"accepted": False}
 
     seed.seed_questions()
     seed.seed_questions()
     assert client.get("/api/today").get_json()["questions"] == today["questions"]
+    for typo, canonical in [("Jenkis", "Jenkins"), ("Jenkisn", "Jenkins"), ("Argo CDD", "Argo")]:
+        assert client.post("/api/submit", json={**ci_guess, "answer": typo}).get_json() == {
+            "accepted": False, "correction": canonical,
+        }
     for item in sample:
         alias, canonical, invalid = examples[item["slug"].removeprefix("curated-basics-")]
         expected = next(answer for answer in item["answers"] if answer["canonical"] == canonical)

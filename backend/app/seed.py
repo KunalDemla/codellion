@@ -59,7 +59,7 @@ def _sync_aliases(answer, aliases, case_sensitive):
     answer.aliases[:] = updated
 
 
-def _sync_live_aliases(question, item):
+def _sync_live_answer_rules(question, item):
     if (question.prompt != item["prompt"]
             or question.scope != item.get("scope")
             or question.case_sensitive != item.get("case_sensitive", False)):
@@ -71,6 +71,7 @@ def _sync_live_aliases(question, item):
         for name, answer in answers.items()
     ):
         return
+    question.allow_fuzzy = item.get("allow_fuzzy", True)
     for name, answer in answers.items():
         _sync_aliases(answer, entries[name].get("aliases", []), question.case_sensitive)
 
@@ -92,7 +93,7 @@ def seed_questions(bank="curated"):
     for item in items:
         question = existing.get(item["slug"])
         if question and question.id in live_ids:
-            _sync_live_aliases(question, item)
+            _sync_live_answer_rules(question, item)
             continue
         cdata = item["category"]
         category = categories.get(cdata["slug"])

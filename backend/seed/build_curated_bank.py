@@ -124,7 +124,7 @@ class Bank:
         self.questions.append({
             "slug": "curated-basics-" + slug,
             "category": {"slug": re.sub(r"[^a-z0-9]+", "-", category.lower()).strip("-"), "name": category},
-            "prompt": prompt, "scope": scope, "allow_fuzzy": False,
+            "prompt": prompt, "scope": scope, "allow_fuzzy": True,
             "case_sensitive": sensitive, "status": "approved", "answers": answers,
         })
 

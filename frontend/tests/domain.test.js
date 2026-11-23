@@ -103,3 +103,43 @@ test('answer review uses the default route and forwards the player and filters',
   assert.equal(api.canReview, true);
   assert.deepEqual(await api.answers(runId, 3, { q: 'C++', tier: 'common', cursor: '50' }), { items: [], nextCursor: null });
 });
+
+test('round expiry follows the correction preview setting', async () => {
+  for (const preview of [true, false]) {
+    const date = '2026-11-23';
+    let clock = Date.parse(date + 'T12:00:00Z');
+    const entries = new Map();
+    const submissions = [];
+    const api = createQuizApi({
+      baseUrl: '/api', timeoutMs: 5000, clock: () => clock,
+      storage: {
+        getItem: key => entries.get(key),
+        setItem: (key, value) => entries.set(key, value),
+        removeItem: key => entries.delete(key),
+      },
+      fetcher: async (url, options) => {
+        if (url === '/api/today') return Response.json({
+          date, serverTime: new Date(clock).toISOString(), resetAt: '2026-11-24T00:00:00Z',
+          rules: { previewSeconds: 0, answerSeconds: 2 },
+          questions: [{ promptId: 'p1', prompt: 'Name a Python function.' }],
+        });
+        if (url === '/api/games') return Response.json({});
+        assert.equal(url, '/api/submit');
+        const { answer } = JSON.parse(options.body);
+        submissions.push(answer);
+        return Response.json(answer === 'print'
+          ? { accepted: true, answer, score: 10, receipt: 'signed' }
+          : { accepted: false, correction: 'print' });
+      },
+    });
+    await api.daily();
+    const { run } = await api.start(date);
+    const suggestion = await api.guess(run.id, 1, { text: 'prnit', draftRevision: 1, previewCorrections: true });
+    assert.equal(suggestion.outcome, 'correction_required');
+    assert.equal(suggestion.run.currentRound.draft.text, 'print');
+    clock += 2000;
+    const settled = (await api.run(run.id, preview)).run;
+    assert.equal(settled.rounds[0].points, preview ? 0 : 10);
+    assert.deepEqual(submissions, preview ? ['prnit', 'prnit'] : ['prnit', 'prnit', 'print']);
+  }
+});

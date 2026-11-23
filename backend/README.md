@@ -6,7 +6,7 @@ Flask + SQLAlchemy + PostgreSQL backend. The daily challenge changes at **00:00 
 
 - Seven prompts per daily challenge; the maximum score is 700.
 - Tiers and points are `Public` 10, `Known Trick` 15, `User Space` 30, `Privileged` 60, `Kernel` 85, and `Root Key` 100.
-- Exact canonical answers and aliases are accepted immediately and earn the same score. A confident typo match can return `accepted: false` with a suggested `correction` when fuzzy matching is enabled for that question. Submit the suggested answer to confirm it. Only accepted answers are recorded and consume that prompt.
+- Exact canonical answers and aliases are accepted immediately and earn the same score. Daily questions also support typo suggestions. For guesses of at least four characters containing a letter, the server can suggest a single accepted answer after one insertion, deletion, substitution, or adjacent swap. A case-only change on a case-sensitive question is not suggested. Only accepted answers are recorded and consume that prompt.
 - Incorrect, empty, ambiguous, or unconfirmed guesses are not recorded. A player may retry until the client timer ends. The backend closes submissions when the UTC daily challenge rolls over.
 - One run per `playerId` per UTC date. `playerId` and `runId` are UUIDs; account authentication is not implemented yet.
 - Scores are computed by the server. Accepted answers return a signed HMAC-SHA256 receipt. Receipts are persisted so repeating an accepted submission returns the original result.

@@ -1,7 +1,6 @@
 import hashlib
 import re
 import uuid
-from difflib import SequenceMatcher
 from datetime import date, datetime, time, timedelta, timezone
 from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
@@ -9,7 +8,7 @@ from flask import current_app
 from app.extensions import db
 from app.models import (Game, GameQuestion, GameSubmission, Question, AcceptedAnswer,
                         AnswerAlias, DailyChallenge, DailyChallengeQuestion)
-from .answer_validator import normalize_answer
+from .answer_validator import is_single_typo, normalize_answer
 from .receipt import issue_receipt, verify_receipt
 
 class GameError(Exception):
@@ -167,27 +166,29 @@ def current_app_config():
     from flask import current_app
     return current_app.config
 
-def _correction_suggestion(question_id, normalized, allow_fuzzy, case_sensitive):
-    # Conservative typo suggestions only. Ambiguous or weak matches stay retryable.
-    if not allow_fuzzy or len(normalized) < 4:
+def _correction_suggestion(question, normalized):
+    if not question.allow_fuzzy or len(normalized) < 4 or not any(char.isalpha() for char in normalized):
         return None
-    answers = AcceptedAnswer.query.filter_by(question_id=question_id, is_active=True).all()
-    candidates = [(answer, answer.canonical) for answer in answers]
-    aliases = AnswerAlias.query.join(AcceptedAnswer).filter(AcceptedAnswer.question_id == question_id, AcceptedAnswer.is_active.is_(True)).all()
-    candidates.extend((alias.answer, alias.alias) for alias in aliases)
-    ranked = sorted(
-        ((SequenceMatcher(None, normalized, normalize_answer(label, case_sensitive)).ratio(), answer)
-         for answer, label in candidates),
-        key=lambda item: item[0], reverse=True)
-    unique_ranked = []
-    for similarity, answer in ranked:
-        if all(answer.id != previous.id for _, previous in unique_ranked):
-            unique_ranked.append((similarity, answer))
-    if not unique_ranked or unique_ranked[0][0] < 0.88:
-        return None
-    if len(unique_ranked) > 1 and unique_ranked[0][0] - unique_ranked[1][0] < 0.10:
-        return None
-    return unique_ranked[0][1]
+    criteria = (AcceptedAnswer.question_id == question.id, AcceptedAnswer.is_active.is_(True))
+    minimum = max(4, len(normalized) - 1)
+    maximum = len(normalized) + 1
+    canonicals = db.select(AcceptedAnswer.id, AcceptedAnswer.normalized).where(
+        *criteria, func.length(AcceptedAnswer.normalized).between(minimum, maximum),
+    )
+    aliases = (db.select(AcceptedAnswer.id, AnswerAlias.normalized)
+               .join(AnswerAlias, AnswerAlias.answer_id == AcceptedAnswer.id)
+               .where(*criteria, func.length(AnswerAlias.normalized).between(minimum, maximum)))
+    folded = normalized.casefold()
+    match_id = None
+    for answer_id, label in db.session.execute(canonicals.union_all(aliases)):
+        if question.case_sensitive and label.casefold() == folded:
+            return None
+        if answer_id == match_id or not is_single_typo(normalized, label):
+            continue
+        if match_id is not None:
+            return None
+        match_id = answer_id
+    return db.session.get(AcceptedAnswer, match_id) if match_id is not None else None
 
 def submit_answer(data):
     required = ("date", "promptId", "answer", "playerId", "runId")
@@ -238,10 +239,7 @@ def submit_answer(data):
         match = active.join(AnswerAlias).filter(AnswerAlias.normalized == normalized).first()
     if match is None:
         if not preview:
-            suggestion = _correction_suggestion(
-                game_question.question_id, normalized,
-                game_question.question.allow_fuzzy, game_question.question.case_sensitive,
-            )
+            suggestion = _correction_suggestion(game_question.question, normalized)
             if suggestion is not None:
                 return {"accepted": False, "correction": suggestion.canonical}
         # Wrong and empty guesses are deliberately not persisted or consuming.
