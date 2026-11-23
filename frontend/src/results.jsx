@@ -126,7 +126,7 @@ export default function Results({ run, now, preferences, loadDaily }) {
   const [results, setResults] = useState(null);
   const [error, setError] = useState('');
   const [request, setRequest] = useState(0);
-  const [expanded, setExpanded] = useState(run.rounds[0]?.number ?? null);
+  const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [shareText, setShareText] = useState('');
 
